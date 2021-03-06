@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://shame41.github.io</id>
     <title>shame41</title>
-    <updated>2021-03-06T15:52:33.927Z</updated>
+    <updated>2021-03-06T15:54:37.962Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://shame41.github.io"/>
     <link rel="self" href="https://shame41.github.io/atom.xml"/>
@@ -10,6 +10,15 @@
     <logo>https://shame41.github.io/images/avatar.png</logo>
     <icon>https://shame41.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, shame41</rights>
+    <entry>
+        <title type="html"><![CDATA[测试]]></title>
+        <id>https://shame41.github.io/post/ce-shi/</id>
+        <link href="https://shame41.github.io/post/ce-shi/">
+        </link>
+        <updated>2021-03-06T15:54:23.000Z</updated>
+        <content type="html"><![CDATA[<p>大苏打实打实大苏打</p>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Typora基本用法 ]]></title>
         <id>https://shame41.github.io/post/typora-ji-ben-yong-fa/</id>
