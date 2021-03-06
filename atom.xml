@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://shame41.github.io</id>
     <title>shame41</title>
-    <updated>2021-03-06T15:07:20.362Z</updated>
+    <updated>2021-03-06T15:22:39.208Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://shame41.github.io"/>
     <link rel="self" href="https://shame41.github.io/atom.xml"/>
@@ -10,4 +10,98 @@
     <logo>https://shame41.github.io/images/avatar.png</logo>
     <icon>https://shame41.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, shame41</rights>
+    <entry>
+        <title type="html"><![CDATA[Typora基本用法 ]]></title>
+        <id>https://shame41.github.io/post/typora-ji-ben-yong-fa/</id>
+        <link href="https://shame41.github.io/post/typora-ji-ben-yong-fa/">
+        </link>
+        <updated>2021-03-06T15:18:20.000Z</updated>
+        <content type="html"><![CDATA[<p><mark>（1）标题</mark></p>
+<h1 id="一级标题">一级标题</h1>
+<h2 id="二级标题">二级标题</h2>
+<h3 id="三级标题">三级标题</h3>
+<h4 id="四级标题">四级标题</h4>
+<h5 id="五级标题">五级标题</h5>
+<h6 id="六级标题">六级标题</h6>
+<p><mark>（2）字体</mark></p>
+<p><strong>加粗</strong></p>
+<p><em>斜体</em></p>
+<p><em><strong>斜体加粗</strong></em></p>
+<p><s>删除线</s></p>
+<p><mark>高亮</mark></p>
+<p>我是<sup>上标</sup></p>
+<p>我是<sub>下标</sub></p>
+<p><mark>（3）列表</mark></p>
+<ul>
+<li>
+<p>一二三四五</p>
+<ul>
+<li>
+<p>上山打老虎</p>
+<ul>
+<li>
+<p>老虎没打到</p>
+<ul>
+<li>打到小松鼠</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<ol>
+<li>
+<p>一二三四五</p>
+</li>
+<li>
+<p>上山打老虎</p>
+</li>
+<li>
+<p>老虎没打到</p>
+</li>
+<li>
+<p>打到小松鼠</p>
+</li>
+</ol>
+<p><mark>（4）表格</mark></p>
+<p>| Mon    | TUE    | WED    | THU    | FRI    |</p>
+<p>| ------ | ------ | ------ | ------ | ------ |</p>
+<p>| 上山   | 上山   | 上山   | 上山   | 上山   |</p>
+<p>| 打老虎 | 打老虎 | 打老虎 | 打老虎 | 打老虎 |</p>
+<p><mark>（5）引用</mark></p>
+<blockquote>
+<p>一二三四五</p>
+</blockquote>
+<blockquote>
+<blockquote>
+<p>上山打老虎</p>
+</blockquote>
+</blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>老虎没打到</p>
+</blockquote>
+</blockquote>
+</blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>打到小松鼠</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+<p><mark>（6）分割线</mark></p>
+<hr>
+<p><mark>（7）代码</mark></p>
+<p><code>我是代码</code></p>
+<pre><code>
+我是代码框
+
+</code></pre>
+]]></content>
+    </entry>
 </feed>
