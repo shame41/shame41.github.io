@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://shame41.github.io</id>
     <title>shame41</title>
-    <updated>2021-03-08T15:10:35.880Z</updated>
+    <updated>2021-03-10T15:39:23.593Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://shame41.github.io"/>
     <link rel="self" href="https://shame41.github.io/atom.xml"/>
@@ -1076,6 +1076,178 @@ public class Quick
 
 }
 </code></pre>
+<h2 id="优先队列">优先队列</h2>
+<p>很多情况下，我们需要这么一种工具，它能非常快速地提供给我们一个数组中最大的元素(最小同理)。很显然，一种简单粗暴的解决方式就是在取出元素时排序整个数组，但是这样太慢了，因为我们只是要最大的，此时数组不一定要有序，因此我们引入一种工具：<strong>优先队列</strong></p>
+<h3 id="二叉堆优先队列">二叉堆优先队列🥖</h3>
+<p>这里我们只介绍二叉堆组成的优先队列，在最坏情况下，它能保证将元素插入或取出优先队列都只需要<strong>logN</strong>的复杂度，实现整体最优。👍</p>
+<h4 id="原理-10">原理</h4>
+<p><strong>二叉堆</strong>的定义</p>
+<ol>
+<li>
+<p>当一棵二叉树的每个节点都大于等于(小于等于同理)它的两个子节点时，它被称为<strong>堆有序</strong></p>
+</li>
+<li>
+<p>根节点是堆有序的二叉树的最值节点</p>
+</li>
+<li>
+<p><strong>二叉堆</strong>是一组能够用<strong>堆有序</strong>的<strong>完全二叉树</strong>（你不会不知道什么是完全二叉树吧）排序的元素，并在数组中按层级储存</p>
+</li>
+<li>
+<p>为了方便，<strong>我们不使用第一个节点</strong>，这样，位置为k的<strong>父节点的位置为k/2</strong>，两个<strong>子节点分别是2k或2k+1</strong></p>
+</li>
+</ol>
+<figure data-type="image" tabindex="3"><img src="C:%5CUsers%5CAdministrator%5CDesktop%5C%E6%96%B0%E5%BB%BA%E6%96%87%E4%BB%B6%E5%A4%B9%5C77c6a7efce1b9d16836da71efbdeb48f8c546422.png" alt="" loading="lazy"></figure>
+<p>堆有两个基本操作，<strong>插入元素</strong>，<strong>删除最值元素</strong></p>
+<p><strong>插入元素</strong>：我们将新元素加到数组末尾，然后增加堆的大小N，并让这个元素<strong>上浮</strong>到合适位置</p>
+<p><strong>删除最值元素</strong>：将数组顶端元素删去最大的元素并返回，然后<strong>把数组最后一个元素放到顶端</strong>，让这个元素<strong>下沉</strong>到合适位置</p>
+<p>我们所说的<strong>上浮</strong>与<strong>下沉</strong>指的是<strong>堆的有序化</strong>，即将元素放到它应在在的位置</p>
+<p><strong>上浮</strong>：如果堆的有序状态因为某个节点<strong>变得比它的父节点更大</strong>而被打破，那么我们就需要<strong>交换它和它的父节点</strong>来修复堆。很显然，交换后，这个节点比它的两个子节点更大，<strong>但这个节点仍然可能比它现在的父节点大</strong>，因此我们要重复上面的操作，直到有序。</p>
+<p><strong>下沉</strong>：如果堆的有序状态因为某个节点<strong>变得比它的两个子节点或者其中之一更小</strong>而被打破了，那么我们需要<strong>交换它和它的两个子节点中最大的那个</strong>来修复堆，不断重复上述操作，直到它的子节点都比它小或者到达了堆的底部。</p>
+<h4 id="代码举例-12">代码举例</h4>
+<p>值得一提的是，堆可以分为<strong>大顶堆</strong>和<strong>小顶堆</strong>，这里我们实现前者</p>
+<pre><code class="language-java">import java.util.Random;
+public class MaxPQ&lt;Key extends Comparable&lt;Key&gt;&gt;
+{
+	//基于堆的优先队列
+	private Key[] pq;	//基于堆的完全二叉树
+	private int N = 0;	//储存于pq[1..N]中，pq[0]没有使用
+	
+	public MaxPQ(int maxN)
+	{
+		pq = (Key[]) new Comparable[maxN+1];
+	}
+	public boolean isEmpty()
+	{
+		return N == 0;
+	}
+
+	public void insert(Key v)
+	{
+		pq[++N] = v;
+		swim(N);
+	}
+	public Key delMax()
+	{
+		Key max = pq[1];
+		exch(1, N--);
+		pq[N+1] = null;
+		sink(1);
+		return max;
+	}
+	
+	private boolean less(int i, int j)
+	{
+		return pq[i].compareTo(pq[j]) &lt; 0;
+	}
+	private void exch(int i, int j)
+	{
+		Key t = pq[i];
+		pq[i] = pq[j];
+		pq[j] = t;
+	}
+	private void swim(int k)//上浮
+	{
+		while(k&gt;1 &amp;&amp; less(k/2, k))
+		{
+			exch(k/2, k);
+			k = k/2;
+		}
+	}
+	private void sink(int k)
+	{
+		while(2*k &lt;= N)
+		{
+			int j = 2*k;
+			if(j&lt;N &amp;&amp; less(j, j+1))
+				j++;//确定两个子节点哪个更大
+			if(!less(k, j))
+				break;//再比较最大的子节点与父节点的关系
+			exch(k, j);
+			k = j;
+		}
+	}
+	
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+		MaxPQ&lt;Integer&gt; a = new MaxPQ(1000000);
+		Random r = new Random(13);
+		for (int i = 0; i&lt;1000000; i++)
+		{
+			a.insert(r.nextInt()%1000000);
+		}
+		System.out.println(a.delMax());
+	}
+
+}
+
+</code></pre>
+<h3 id="堆排序">堆排序🧀</h3>
+<p>如果将所有元素插入一个小顶堆，然后重复调用<strong>删除最小元素</strong>的操作来将它们按顺序删去。这就是堆排序。</p>
+<h4 id="原理-11">原理</h4>
+<p>堆排序有两个阶段 <strong>堆的构造</strong>，<strong>下沉排序</strong>。</p>
+<p><strong>堆的构造</strong>：我们将原始数组重新组织安排进一个堆中。一个无脑的方法，即从左到右遍历数组，对每个元素都进行上浮操作，这样能在NlogN内实现。可是这样<strong>太笨了</strong>😫  一种更聪明更高效的方法是 ：<strong>从N/2开始向左对数组中的元素进行下沉</strong>，为什么要这么做呢？因为由于<strong>完全二叉树</strong>的数学性质，可以发现，N/2之后的所有元素都是<strong>叶</strong>，显然，叶是不需要下沉的，所以我们只用下沉N/2之前的元素。</p>
+<p><strong>下沉排序</strong>：我们从堆中按<strong>递减顺序</strong>取出所有元素并得到排序结果。具体来说，我们将数组第一个元素(数组[0]是不用的，所以第一个元素是数组[1])<strong>与最后一个元素交换，然后下沉交换后的第一个元素</strong>。(与选择排序相似,但所需的比较少得多)</p>
+<h4 id="代码举例-13">代码举例</h4>
+<pre><code class="language-java">public class PQsort
+{
+	public static void sort(Comparable[] a)
+	{
+		//堆排序
+		int N = a.length;
+		Comparable[] pb = new Comparable[N+1]; 
+		for(int i=0; i&lt;N; i++)
+			pb[i+1] = a[i];
+		for(int k = N/2; k &gt;= 1; k--)
+			sink(pb, k, N);//用于构造大顶堆
+		while(N &gt; 1)
+		{
+			exch(pb, 1, N--);
+			sink(pb, 1, N);
+		}
+		for(int i=0; i&lt;a.length; i++)
+			a[i] = pb[i+1];
+	}
+	private static void sink(Comparable[] a, int k, int N)
+	{
+		while(2*k &lt;= N)
+		{
+			int j = 2*k;
+			if(j&lt;N &amp;&amp; less(a, j, j+1))
+				j++;
+			if(!less(a, k, j))
+				break;
+			exch(a, k, j);
+			k = j;
+		}
+	}
+	private static boolean less(Comparable[] pq, int i, int j)
+	{
+		return pq[i].compareTo(pq[j]) &lt; 0;
+	}
+	private static void exch(Comparable[] pq, int i, int j)
+	{
+		Comparable t = pq[i];
+		pq[i] = pq[j];
+		pq[j] = t;
+	}
+	private static void show(Comparable[] a)
+	{
+		//在单行中打印数组
+		for(int i = 0; i&lt;a.length; i++)
+			System.out.print(a[i]+&quot; &quot;);
+	}
+	public static void main(String[] args)
+	{
+		Integer[] a = {19,15,18,20,5,24,1,13,16,12,5};
+		sort(a);
+		show(a);
+	}
+
+}
+</code></pre>
+<h3 id="索引优先队列">索引优先队列</h3>
+<p>我们先前制作出的优先队列能做的事情很少，比如它除了数组下标，就没有其它的索引了，在未来我们会需要用到优先队列并且还要让其中的元素与某种东西绑定(Dijkstra算法会用到)，这时我们就需要一种更复杂的优先队列</p>
 ]]></content>
     </entry>
     <entry>
