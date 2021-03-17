@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://shame41.github.io</id>
     <title>shame41</title>
-    <updated>2021-03-10T15:39:53.756Z</updated>
+    <updated>2021-03-17T05:21:31.823Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://shame41.github.io"/>
     <link rel="self" href="https://shame41.github.io/atom.xml"/>
@@ -1246,8 +1246,511 @@ public class MaxPQ&lt;Key extends Comparable&lt;Key&gt;&gt;
 
 }
 </code></pre>
-<h3 id="索引优先队列">索引优先队列</h3>
-<p>我们先前制作出的优先队列能做的事情很少，比如它除了数组下标，就没有其它的索引了，在未来我们会需要用到优先队列并且还要让其中的元素与某种东西绑定(Dijkstra算法会用到)，这时我们就需要一种更复杂的优先队列</p>
+<h3 id="索引优先队列">索引优先队列🥗</h3>
+<p>我们的优先队列能做到的事情很少，只能向其中加入元素和获取并删除最值元素。然鹅在很多应用中，允许使用<mark>已经进入优先队列中的元素</mark>是很有必要的（如Dijkstra算法）。要做到这一点的一种简单方法就是给每个元素一个<strong>索引</strong>。</p>
+<h4 id="原理-12">原理</h4>
+<p>索引优先队列用一个<strong>整数</strong>和队列中的<strong>元素</strong>进行关联，这样，当我们要访问队列中的元素时，只需要用它所关联的整数进行索引查找就可以了。</p>
+<p>为此，我们创立三个数组  pq，qp，elements</p>
+<p>其中，pq[qp[i]] = qp[pq[i]] = i，这样，当我们想访问元素“b”时，我们就可以通过elements[10]来访问它（其中10是与&quot;b &quot;相关的整数），而当我们想要知道元素&quot;b&quot;在<strong>二叉堆</strong>中处于哪个位置时，我们可以通过qp[10]。到现在我们只用了两个数组(elements和qp)，那pq数组呢？</p>
+<p>首先，作为优先队列的一种，它一定能通过<strong>上浮</strong>和<strong>下沉</strong>来使堆<strong>有序化</strong>。在普通优先队列中，我们直接对队列的元素进行操作，而在索引优先队中，<strong>储存元素的数组已经不再具有二叉堆的性质</strong>，取而代之的使pq数组，因此在索引优先队列中，<strong>储存元素的数组用来快速索引查找，pq数组作为储存元素的数组的映射，具有堆的性质，因此我们的上浮下沉都是对pq数组操作而不是对储存元素的数组</strong>。</p>
+<p>当然，为了保持pq[qp[i]] = qp[pq[i]] = i的性质，我们在改变pq后也要相应改变qp</p>
+<figure data-type="image" tabindex="4"><img src="https://shame41.github.io/post-images/1615888769947.jpg" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="5"><img src="https://shame41.github.io/post-images/1615888773668.jpg" alt="" loading="lazy"></figure>
+<h4 id="代码举例-14">代码举例</h4>
+<pre><code class="language-java">![u=2489824036,314288118&amp;fm=26&amp;gp=0](C:\Users\Administrator\Desktop\新建文件夹\u=2489824036,314288118&amp;fm=26&amp;gp=0.png)public class IndexMinPQ&lt;Key extends Comparable&lt;Key&gt;&gt;
+{
+	private int N;				//amount of the elements in PQ
+	private int[] pq;			//index binary heap, begin at '1'
+	private int[] qp;			//inverted pq : qp[pq[i]] = pq[qp[i]] = i
+	private Key[] keys;			//elements with priority
+	public IndexMinPQ(int maxN)
+	{
+		keys = (Key[]) new Comparable[maxN + 1];
+		pq = new int[maxN + 1];
+		qp = new int[maxN + 1];
+		for(int i = 0; i &lt;= maxN; i++)
+			qp[i] = -1;
+	}
+	private void exch(int i, int j)
+	{
+		int t = pq[i];
+		pq[i] = pq[j];
+		pq[j] = t;
+		t = qp[pq[i]];
+		qp[pq[i]] = qp[pq[j]];
+		qp[pq[j]] = t;
+	}
+	private void swim(int k)//上浮
+	{
+		while(k&gt;1 &amp;&amp; less(k/2, k))
+		{
+			exch(k/2, k);
+			k = k/2;
+		}
+	}
+	private void sink(int k)
+	{
+		while(2*k &lt;= N)
+		{
+			int j = 2*k;
+			if(j&lt;N &amp;&amp; less(j, j+1))
+				j++;
+			if(!less(k, j))
+				break;
+			exch(k, j);
+			k = j;
+		}
+	}
+	private boolean less(int i, int j)
+	{
+		return keys[pq[i]].compareTo(keys[pq[j]]) &gt; 0;
+	}
+	public boolean isEmpty()
+	{
+		return N == 0;
+	}
+	public boolean contains(int k)
+	{
+		return qp[k] != -1;
+	}
+	public void insert(int k, Key key)
+	{
+		N++;
+		qp[k] = N;
+		pq[N] = k;
+		keys[k] = key;
+		swim(N);
+	}
+	public Key min()
+	{
+		return keys[pq[1]];
+	}
+	public int delMin()
+	{
+		int indexOfMin = pq[1];
+		exch(1, N--);
+		sink(1);
+		keys[pq[N+1]] = null;
+		qp[pq[N+1]] = -1;
+		return indexOfMin;
+	}
+
+	public int minIndex()
+	{
+		return pq[1];
+	}
+	public void change(int k, Key key)
+	{
+		keys[k] = key;
+		swim(qp[k]);
+		sink(qp[k]);
+	}
+	public void delete(int k)
+	{
+		int index = qp[k];
+		exch(index, N--);
+		swim(index);
+		sink(index);
+		keys[k] = null;
+		qp[k] = -1;
+	}
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stu
+		IndexMinPQ&lt;Integer&gt; a = new IndexMinPQ&lt;Integer&gt;(10);
+		a.insert(1,11);
+		a.insert(3,6);
+		a.insert(4,14);
+		a.insert(6,3);
+		a.insert(8,8);
+		a.insert(10,2);
+		a.delete(4);
+		System.out.println(a.minIndex());
+ercha
+	}
+
+}
+</code></pre>
+<p>#查找</p>
+<p>现代计算机和网络使我们能够访问海量数组。高效检索这些信息的能力是处理它们的重要前提！</p>
+<h2 id="二叉查找树">二叉查找树🥙</h2>
+<p>首先，我们需要定义一些术语。我们所使用的数据结构是由<strong>结点</strong>组成（后边我总是时不时打错成“节点”，无伤大雅），结点包括的<strong>链接</strong>可以为空（null）或者指向其他节点。在一个<strong>二叉树</strong>中，每个结点只能有一个父结点（根节点没有父结点），而且每个结点都只有<em>左右</em>两个链接，指向自己的<em>左子结点</em>和<em>右子节点</em>。在二叉查找树中，每个结点还包含了一个<strong>键</strong>和一个<strong>值</strong>。</p>
+<h3 id="构造">构造</h3>
+<p>这里我们用链表来构造查找二叉树。私有方法size( )可以得到节点任意节点的子节点数</p>
+<p>size(x) = size(x.left) + size(x.right) + 1</p>
+<p><mark>二叉查找树(BST)是一棵二叉树，其中每个结点都有一个可比较的键，且每个结点的键都大于其左子树中任意节点的键而小于右子树中的任意节点的键</mark></p>
+<figure data-type="image" tabindex="6"><img src="https://shame41.github.io/post-images/1615888748736.png" alt="" loading="lazy"></figure>
+<h3 id="查找">查找</h3>
+<p>查找一个键，如果键在树中那么一定能找到，成为<em>命中</em>，如果不在，则返回null。由于查找二叉树的完美结构，查找一个键时，比较这个键与根节点的大小，再根据二者的大小，选择接下来要与（左/右）节点比较，就这样<strong>递归地</strong>进行，直到二者相等，或者递归到了叶。</p>
+<h3 id="插入">插入</h3>
+<p>插入操作与查找操作相似。我们在插入时，先比较它与根节点的大小，如果比根节点大，那么<strong>就放在根节点的左边，否则放在根节点的右边</strong>（当然，如果和根节点相等，那就直接把根节点的值改成要插入的值）。这里的<em>放在左边或者右边</em>是递归的关键。这种递归进行到最后，要么遇到了一个和插入结点的键值相等的结点</p>
+<p>，要么遇到子叶。如果遇到键值相等的节点，我们就可以把那个节点的值替换成我们要插入的结点的值。<strong>如果遇到了子叶，我们就创建一个新节点，让它的键和值等于我们要插入的结点的</strong>，这时，结点的父结点就是我们刚刚比较过的结点。</p>
+<figure data-type="image" tabindex="7"><img src="https://shame41.github.io/post-images/1615888730218.gif" alt="" loading="lazy"></figure>
+<h3 id="返回最值">返回最值</h3>
+<p>很轻易就能发现，二叉查找树最左下角的结点是最小的结点，最右下角的结点是最大的结点。了解了这个，寻找最值也就转化成立寻找最左的子叶和最右的子叶。</p>
+<h3 id="删除">删除</h3>
+<p>BST的删除操作有些许复杂，它有三种情况：</p>
+<ol>
+<li>删除的结点是叶</li>
+<li>删除的结点有一个子节点</li>
+<li>删除的结点有两个子节点</li>
+</ol>
+<p>1962年，T.Hibbard提出了解决这个问题的第一种方法，删除节点x后用它的<em>后继节点</em>填上它的位置。</p>
+<ol>
+<li>如果结点是叶，那么就直接删除结点</li>
+<li>如果结点没有右节点，那么删除节点后，让它的左子树填补上它的位置</li>
+<li>如果结点有右节点，那么找到右子树中的<strong>最小结点</strong>，把它剔掉（即执行删除动作），然后放在要删除结点的位置（继承被删除的结点的父子关系）</li>
+</ol>
+<figure data-type="image" tabindex="8"><img src="https://shame41.github.io/post-images/1615888689422.png" alt="" loading="lazy"></figure>
+<h3 id="遍历">遍历</h3>
+<p>二叉树有三种遍历方法，<strong>前序遍历，中序遍历，后序遍历</strong></p>
+<p>三者都是从根节点开始遍历，差别在于遍历</p>
+<figure data-type="image" tabindex="9"><img src="https://shame41.github.io/post-images/1615888666460.gif" alt="" loading="lazy"></figure>
+<h4 id="前序遍历">前序遍历</h4>
+<p>前序遍历从当前节点（节点 c）开始访问，然后访问其左孩子，再访问右孩子。开始时，节点 c 为 BST 的根节点。算法如下：</p>
+<ol>
+<li>访问节点 c；</li>
+<li>对节点 c 的左孩子重复第 1 步；</li>
+<li>对节点 c 的右孩子重复第 1 步；</li>
+</ol>
+<p>则上图中树的遍历结果为：90, 50, 20, 5, 25, 75, 66, 80, 150, 95, 92, 111, 175, 166, 200。</p>
+<h4 id="中序遍历">中序遍历</h4>
+<p>中序遍历是从当前节点（节点 c）的左孩子开始访问，再访问当前节点，最后是其右节点。开始时，节点 c 为 BST 的根节点。算法如下：</p>
+<ol>
+<li>访问节点 c 的左孩子；</li>
+<li>对节点 c 重复第 1 步；</li>
+<li>对节点 c 的右孩子重复第 1 步。</li>
+</ol>
+<p>则上图中树的遍历结果为：5, 20, 25, 50, 66, 75, 80, 90, 92, 95, 111, 150, 166, 175, 200。</p>
+<h4 id="后序遍历">后序遍历</h4>
+<p>后序遍历首先从当前节点（节点 c）的左孩子开始访问，然后是右孩子，最后才是当前节点本身。开始时，节点 c 为 BST 的根节点。算法如下：</p>
+<ol>
+<li>访问节点 c 的左孩子；</li>
+<li>对节点 c 的右孩子重复第1 步；</li>
+<li>对节点 c 重复第 1 步；</li>
+</ol>
+<p>则上图中树的遍历结果为：5, 25, 20, 66, 80, 75, 50, 92, 111, 95, 166, 200, 175, 150, 90。</p>
+<h3 id="代码举例-15">代码举例</h3>
+<pre><code class="language-java">import java.util.Random;
+
+//二叉查找树
+public class BST&lt;Key extends Comparable&lt;Key&gt;, Value&gt;
+{
+	private Node root;		//二叉查找树的根节点
+	
+	private class Node
+	{
+		private Key key;	//键
+		private Value val;	//值
+		private Node left, right;//指向子树的节点
+		private int N;		//以该节点为根的子树中的节点总数
+		
+		private Node(Key key, Value val, int N)
+		{
+			//构造函数
+			this.key = key;
+			this.val = val;
+			this.N = N;
+		}
+	}
+	
+	public int size()
+	{
+		return size(root);
+	}
+	private int size(Node x)
+	{
+		if(x == null)
+			return 0;
+		else
+			return x.N;
+	}
+	public Value get(Key key)
+	{
+		return get(root, key);
+	}
+	private Value get(Node x, Key key)
+	{
+		//在以x为根节点的子树中查找并返回key所对应的值
+		//如果找不到则返回null
+		if(x == null)
+			return null;
+		int cmp = key.compareTo(x.key);
+		if		(cmp &lt; 0)
+			return get(x.left, key);
+		else if (cmp &gt; 0)
+			return get(x.right, key);
+		else
+			return x.val;
+	}
+	
+	public void put(Key key, Value val)
+	{
+		//查找key,找到则更新它的值，否则为它创建一个新的节点
+		root = put(root, key, val);
+	}
+	private Node put(Node x, Key key, Value val)
+	{
+		//如果key存在于以x为根节点的子树中则更新它的值
+		//否则将以key和val为键值对的新节点插入到该子树中
+		if(x == null)
+			return new Node(key, val, 1);
+		int cmp = key.compareTo(x.key);
+		//递归实现，相当美妙
+		if		(cmp &lt; 0)
+			x.left = put(x.left, key, val);
+		else if (cmp &gt; 0)
+			x.right = put(x.right, key, val);
+		else
+			x.val = val;
+		x.N = size(x.left) + size(x.right) + 1;
+		return x;
+	}
+	public Key min()
+	{
+		return min(root).key;
+	}
+	private Node min(Node x)
+	{
+		if(x.left == null) return x;
+		return min(x.left);
+	}
+	public Key max()
+	{
+		return max(root).key;
+	}
+	private Node max(Node x)
+	{
+		if(x.right == null) return x;
+		return min(x.right);
+	}
+	public Key floor(Key key)
+	{
+		//找出小于等于key的最大键
+		Node x = floor(root, key);
+		if(x == null) return null;
+		return x.key;
+	}
+	public Key ceiling(Key key)
+	{
+		//找出大于key的最小键
+		Node x = ceiling(root, key);
+		if(x == null) return null;
+		return x.key;
+	}
+	private Node floor(Node x, Key key)
+	{
+		if(x == null) return null;
+		int cmp = key.compareTo(x.key);
+		if(cmp == 0) return x;
+		if(cmp &lt; 0)  return floor(x.left, key);
+		Node t = floor(x.right, key);
+		if(t != null) return t;
+		else		  return x;
+	}
+	private Node ceiling(Node x, Key key)
+	{
+		if(x == null) return null;
+		int cmp = key.compareTo(x.key);
+		if(cmp == 0) return x;
+		if(cmp &gt; 0)  return floor(x.right, key);
+		Node t = floor(x.left, key);
+		if(t != null) return t;
+		else		  return x;
+	}
+	public Key select(int k)
+	{
+		return select(root, k).key;
+	}
+	private Node select(Node x, int k)
+	{
+		//返回排名为k的节点
+		if(x == null) return null;
+		int t = size(x.left);
+		if		(t &gt; k) return select(x.left, k);
+		else if (t &lt; k) return select(x.right, k-t-1);
+		else			return x;
+	}
+	public int rank(Key key)
+	{
+		return rank(key, root);
+	}
+	private int rank(Key key, Node x)
+	{
+		//返回以x为根节点的子树中小于x.key的键的数量
+		if(x == null) return 0;
+		int cmp = key.compareTo(x.key);
+		if			(cmp &lt; 0) 
+			return rank(key, x.left);
+		else if		(cmp &gt; 0)
+			return 1 + size(x.left) + rank(key, x.right);
+		else
+			return size(x.left);
+	}
+	public void deleteMin()
+	{
+		root = deleteMin(root);
+	}
+	private Node deleteMin(Node x)
+	{
+		if(x.left == null) return x.right;
+		x.left = deleteMin(x.left);
+		x.N = size(x.left) + size(x.right) + 1;
+		return x;
+	}
+	public void deleteMin(Key key)
+	{
+		root = delete(root, key);
+	}
+	private Node delete(Node x, Key key)
+	{
+		//二叉查找树删除节点操作，难点
+		if(x == null)
+			return null;
+		int cmp = key.compareTo(x.key);
+		if		(cmp &lt; 0)
+			x.left = delete(x.left, key);
+		else if (cmp &gt; 0)
+			x.right = delete(x.right, key);
+		else
+		{
+			//此时cmp == 0，说明已经到达要删除的节点
+			//剩下的工作是判断该节点有几个子节点
+			if(x.right == null) return x.left;
+			if(x.left == null)  return x.right;
+			//很奇怪，如果左右节点都为空，那么上面的的操作不会返回一个Null吗
+			Node t = x;
+			x = min(t.right);
+			x.right = deleteMin(t.right);
+			x.left = t.left;
+		}
+		x.N = size(x.left) + size(x.right) + 1;
+		return x;
+	}
+	private void print(Node x)
+	{
+		if(x == null) return;
+		print(x.left);
+		System.out.print(x.key+&quot; &quot;);
+		print(x.right);
+	}
+	public Iterable&lt;Key&gt; key()
+	{
+		//这个函数返回一个存有整个二叉查找树的队列
+		return keys(min(), max());
+	}
+	public Iterable&lt;Key&gt; keys(Key lo, Key hi)
+	{
+		//这个函数返回一个存有[lo...hi]的二叉查找树的队列
+		LinkListQueue&lt;Key&gt; queue = new LinkListQueue&lt;Key&gt;();
+		keys(root, queue, lo, hi);
+		return queue;
+	}
+	private void keys(Node x, LinkListQueue&lt;Key&gt; queue, Key lo, Key hi)
+	{
+		//这个函数将二叉查找树转成队列
+		if(x == null) return;
+		int cmplo = lo.compareTo(x.key);
+		int cmphi = hi.compareTo(x.key);
+		if(cmplo &lt; 0) 
+			keys(x.left, queue, lo, hi);
+		if(cmplo &lt;= 0 &amp;&amp; cmphi &gt;= 0)
+			queue.enqueue(x.key);
+		if(cmphi &gt; 0)
+			keys(x.right, queue, lo, hi);
+	}
+	
+	public static void main(String[] args)
+	{
+		BST&lt;Integer, String&gt; bst = new BST&lt;Integer, String&gt;();
+		Random r = new Random(1);
+		for(int i = 0; i &lt; 10000; i++)
+		{
+			bst.put(i,r.nextInt()%10000 + &quot;&quot;);
+		}
+	}
+
+}
+</code></pre>
+<h2 id="红黑树">红黑树😅</h2>
+<p>过于复杂😭，之后再补充</p>
+<h2 id="哈希表">哈希表🥪</h2>
+<p>有时，我们会想，如果一个<strong>键值对</strong>的键直接用来当数组的下标，那么我们查找这个值时，不就能很快找到这个值吗。然鹅现实很骨感！如果它的键不是整数怎么办，如果它的键是一个很大的整数怎么办？比如，对于键值对&lt;key: 10000000000,  val: “lisa”&gt;，我们要能快速查询，就要有一个数组至少有10000000000的内存空间，才能满足a[10000000000] = &quot;lisa&quot;这个操作。因此，我们需要将其转换。而转换的方法，也就是<strong>散列表</strong>（也称哈希表）的关键。</p>
+<h3 id="散列函数">散列函数</h3>
+<p>我们的主要问题是，<strong>怎么把不同类型的键用一个函数转换成一系列整数，使它们成为数组的索引</strong>，并且保证这些数不重复，而且便于计算，还能均匀分布在个各区间上（即对于M个键值对，0到M-1直接的每个整数都有相等的机会与之对应）<br>
+<img src="https://shame41.github.io/post-images/1615888623924.jpg" alt="" loading="lazy"></p>
+<p>而散列函数的构建是一个极其高深的数学问题，我们这里举几个简单的例子</p>
+<h4 id="正整数">正整数</h4>
+<p>我们有一系列整数，要构建它的散列函数，最常用的方法是<strong>除留余数法</strong>。我们选择一个<mark>大小为素数M的数组</mark>，对于任意正整数k，计算k%M。</p>
+<p>这样，我们得到的一系列整数能将键有效地分布在0到M-1的范围内。</p>
+<h4 id="浮点数">浮点数</h4>
+<p>如果键是0到1之间的实数，我们可以将它<strong>乘以M并四舍五入得到一个0到M-1的索引值</strong>。</p>
+<p>但是这种方法有缺陷。因为这种情况下键的高位起的作用更大，最低位对散列的结果没有影响。一种优化的方法是<strong>将键表示成二进制然后再使用除留余数法</strong>（Java就是这么做的）</p>
+<h4 id="字符串">字符串</h4>
+<p>我们可以简单地把字符串当作大整数，这样我们就可以使用<strong>除留余数法</strong>。</p>
+<pre><code class="language-java">int hash = 0;
+for(int i = 0; i &lt; s.length; i++)
+	hash = (R * hash + s.charAt(i)) % M;
+//charAt()能返回一个char值，即一个非负16位整数
+</code></pre>
+<h4 id="哈希码">哈希码</h4>
+<p>JAVA为每种数据类型都继承了一个能返回32比特整数的hashCode()方法。我们可以将hashCode()的返回值转化为一个数组索引。具体方法如下</p>
+<pre><code class="language-java">private int hash(Key x)
+{
+	return (x.hashCode() &amp; 0x7fffffff) % M;
+}
+</code></pre>
+<p>这段代码会将符号位屏蔽，然后用除留余数法计算它除以M的余数。在使用这种代码时，我们一般会将数组的大小M取为<strong>素数</strong>以充分利用原散列值的所有位</p>
+<h3 id="拉链法处理碰撞">拉链法处理碰撞</h3>
+<p>前面我们解决了第一个问题：如和将键转换为数组索引，接下来我们要处理第二个问题：<strong>散列值碰撞</strong>，即两个或多个值的散列值相同。 一种直接的方法就是将得到的<mark>大小为M的数组的每个元素都指向一条链表</mark>，链表中的每个结点都储存了散列值为该元素的索引的键值对。这种方法称作<strong>拉链法</strong>。</p>
+<p>基本思想是：选择足够大的M，使得<strong>所有链表都能尽可能短</strong>以保证高效地查找。</p>
+<p>查找分为两步：1.根据散列值找到对应的链表，2.然后沿着链表顺序查找相应的键。<br>
+<img src="https://shame41.github.io/post-images/1615957522860.png" alt="" loading="lazy"><br>
+因为我们用M条链表来保持N个键，无论键在各个链表中分布如何，链表的平均长度肯定都是N/M。<br>
+####代码举例</p>
+<pre><code class="language-java">public class SeparateChainingHashST&lt;Key, Value&gt;
+{
+	private int N;			//键值对总数
+	private int M;			//散列表的大小
+	private SeparateChainingHashST&lt;Key, Value&gt;[] st;//存放链表的数组
+
+	public SeparateChainingHashST()
+	{
+		this(997);
+	}
+	public SeparateChainingHashST(int M)
+	{
+		//创建M条链表
+		this.M = M;
+		st = (SeparateChainingHashST&lt;Key, Value&gt;[]) new SeparateChainingHashST[M];
+		for(int i=0; i&lt;M; i++)
+			st[i] = new SeparateChainingHashST();
+	}
+	private int hash(Key key)
+	{
+		return (key.hashCode() &amp; 0x7fffffff) % M;
+	}
+	public Value get(Key key)
+	{
+		return (Value) st[hash(key)].get(key);
+	}
+	public void put(Key key, Value val)
+	{
+		st[hash(key)].put(key, val);
+	}
+//	public Iterable&lt;Key&gt; keys()
+//	{
+//		
+//	}
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+		SeparateChainingHashST a = new SeparateChainingHashST(7);
+		a.put(1, 'E');
+	}
+
+}
+</code></pre>
 ]]></content>
     </entry>
     <entry>
