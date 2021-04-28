@@ -212,7 +212,7 @@
                     <article class="post-wrap">
                         <header class="post-header">
                             <h1 class="post-title">
-                                关于
+                                哈希表
                             </h1>
                             
                                 <!--en-->
@@ -222,12 +222,12 @@
                                         shame41
                                     </a>
                                     <span class="post-time">
-                                Date: <a href="#">2019-01-25</a>
+                                Date: <a href="#">2021-04-28</a>
                             </span>
                                     <span class="post-readtime">Reading Time:<a
-                                    href="#">0.3
+                                    href="#">8.4
                                     mins</a></span>
-                                    <span class="post-words">words:<a href="#">76</a></span>
+                                    <span class="post-words">words:<a href="#">2107</a></span>
                                     
                                             Views:
                                             <span data-hk-page="current"> - </span>
@@ -237,29 +237,227 @@
                         </header>
                         
                         <div class="post-content">
-                            <blockquote>
-<p>欢迎来到我的小站呀，很高兴遇见你！🤝</p>
-</blockquote>
-<h2 id="关于本站">🏠 关于本站</h2>
-<p>一个不成熟的尝试，内涵一些学习经验还有笔记</p>
-<h2 id="博主是谁">👨‍💻 博主是谁</h2>
-<p>华中科技大学软件工程大一的学生</p>
-<h2 id="兴趣爱好">⛹ 兴趣爱好</h2>
-<p>音乐</p>
-<h2 id="联系我呀">📬 联系我呀</h2>
-<p>QQ 1457140443<br>
-BILIBILI https://space.bilibili.com/3088812</p>
+                            <p>有时，我们会想，如果一个<strong>键值对</strong>的键直接用来当数组的下标，那么我们查找这个值时，不就能很快找到这个值吗。然鹅现实很骨感！如果它的键不是整数怎么办，如果它的键是一个很大的整数怎么办？比如，对于键值对&lt;key: 10000000000,  val: “lisa”&gt;，我们要能快速查询，就要有一个数组至少有10000000000的内存空间，才能满足a[10000000000] = &quot;lisa&quot;这个操作。因此，我们需要将其转换。而转换的方法，也就是<strong>散列表</strong>（也称哈希表）的关键。</p>
+<h1 id="散列函数">散列函数🤣</h1>
+<p>我们的主要问题是，<strong>怎么把不同类型的键用一个函数转换成一系列整数，使它们成为数组的索引</strong>，并且保证这些数不重复，而且便于计算，还能均匀分布在个各区间上（即对于M个键值对，0到M-1直接的每个整数都有相等的机会与之对应）</p>
+<figure data-type="image" tabindex="1"><img src="https://shame41.github.io/post-images/1619600253932.jpg" alt="" loading="lazy"></figure>
+<p>而散列函数的构建是一个极其高深的数学问题，我们这里举几个简单的例子</p>
+<h2 id="正整数">正整数</h2>
+<p>我们有一系列整数，要构建它的散列函数，最常用的方法是<strong>除留余数法</strong>。我们选择一个<mark>大小为素数M的数组</mark>，对于任意正整数k，计算k%M。</p>
+<p>这样，我们得到的一系列整数能将键有效地分布在0到M-1的范围内。</p>
+<h2 id="浮点数">浮点数</h2>
+<p>如果键是0到1之间的实数，我们可以将它<strong>乘以M并四舍五入得到一个0到M-1的索引值</strong>。</p>
+<p>但是这种方法有缺陷。因为这种情况下键的高位起的作用更大，最低位对散列的结果没有影响。一种优化的方法是<strong>将键表示成二进制然后再使用除留余数法</strong>（Java就是这么做的🥱）</p>
+<h2 id="字符串">字符串</h2>
+<p>我们可以简单地把字符串当作大整数，这样我们就可以使用<strong>除留余数法</strong>。</p>
+<pre><code class="language-java">int hash = 0;
+for(int i = 0; i &lt; s.length; i++)
+	hash = (R * hash + s.charAt(i)) % M;
+//charAt()能返回一个char值，即一个非负16位整数
+</code></pre>
+<h2 id="哈希码">哈希码</h2>
+<p>JAVA为每种数据类型都继承了一个能返回32比特整数的hashCode()方法。我们可以将hashCode()的返回值转化为一个数组索引。具体方法如下</p>
+<pre><code class="language-java">private int hash(Key x)
+{
+	return (x.hashCode() &amp; 0x7fffffff) % M;
+}
+</code></pre>
+<p>这段代码会将符号位屏蔽，然后用除留余数法计算它除以M的余数。在使用这种代码时，我们一般会将数组的大小M取为<strong>素数</strong>以充分利用原散列值的所有位</p>
+<h1 id="拉链法处理碰撞">拉链法处理碰撞👺</h1>
+<h2 id="原理">原理</h2>
+<p>前面我们解决了第一个问题：如和将键转换为数组索引，接下来我们要处理第二个问题：<strong>散列值碰撞</strong>，即两个或多个值的散列值相同。 一种直接的方法就是将得到的<mark>大小为M的数组的每个元素都指向一条链表</mark>，链表中的每个结点都储存了散列值为该元素的索引的键值对。这种方法称作<strong>拉链法</strong>。</p>
+<p>基本思想是：选择足够大的M，使得<strong>所有链表都能尽可能短</strong>以保证高效地查找。</p>
+<p>查找分为两步：1.根据散列值找到对应的链表，2.然后沿着链表顺序查找相应的键。</p>
+<figure data-type="image" tabindex="2"><img src="https://shame41.github.io/post-images/1619600670798.jpg" alt="" loading="lazy"></figure>
+<p>因为我们用M条链表来保持N个键，无论键在各个链表中分布如何，链表的平均长度肯定都是N/M。</p>
+<h2 id="代码举例">代码举例</h2>
+<pre><code class="language-java">//用链表实现基于拉链法的哈希表
+public class SeparateChainingHashST&lt;Key, Value&gt;
+{
+	private int N;			//键值对总数
+	private int M;			//散列表的大小
+	private SeparateChainingHashST&lt;Key, Value&gt;[] st;//存放链表的数组
+
+	public SeparateChainingHashST()
+	{
+		this(997);
+	}
+	public SeparateChainingHashST(int M)
+	{
+		//创建M条链表
+		this.M = M;
+		st = (SeparateChainingHashST&lt;Key, Value&gt;[]) new SeparateChainingHashST[M];
+		for(int i=0; i&lt;M; i++)
+			st[i] = new SeparateChainingHashST();
+	}
+	private int hash(Key key)
+	{
+		return (key.hashCode() &amp; 0x7fffffff) % M;
+	}
+	public Value get(Key key)
+	{
+		return (Value) st[hash(key)].get(key);
+	}
+	public void put(Key key, Value val)
+	{
+		st[hash(key)].put(key, val);
+	}
+//	public Iterable&lt;Key&gt; keys()
+//	{
+//		
+//	}
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+		SeparateChainingHashST a = new SeparateChainingHashST(7);
+		a.put(1, 'E');
+	}
+
+}
+
+</code></pre>
+<h1 id="基于线性探测法的散列表">基于线性探测法的散列表🤣</h1>
+<p>散列表的另一种实现方式就是<mark>用大小为M的数组保存N个键值对，其中M&gt;N</mark>。<strong>我们需要依靠数组中的空位解决碰撞冲突</strong>。基于这种策略的所有方法被统称为<strong>开放地址</strong>散列表。它最简单的一种实现方式叫做<strong>线性探测法</strong>。</p>
+<h2 id="原理-2">原理</h2>
+<p>我们在插入键值对时，如果一个键的散列值已经被另一个不同的键占用，我们<strong>便直接看散列表中下一个位置（即索引+1）</strong>。这样会出现两个个结果。</p>
+<ol>
+<li>这个地方的散列值还是和我们要插入的键的散列值相同，我们就再看下一个位置</li>
+<li>这个地方是空的，我们就把键值对放在这里</li>
+</ol>
+<p>我们在查找键值对时，便可以根据散列值来查找，这时又会出现三种结果</p>
+<ol>
+<li>散列值相同且该位置的键与要查找的键相同，则<strong>命中</strong></li>
+<li>散列值相同但该位置的键与要查找的键不同，则<strong>继续查找</strong>，即将索引加一，再判断键是否相等，直到找到该键或遇到空元素</li>
+<li>遇到空元素，该位置没有键，则<strong>未命中</strong></li>
+</ol>
+<figure data-type="image" tabindex="3"><img src="https://shame41.github.io/post-images/1619600712443.png" alt="" loading="lazy"></figure>
+<p>删除操作，在基于线性探测的散列表中，是有点难实现的。因为，你仔细想想，如果仅仅是把要删除的键值对设置为Null，那么其他键值对的探测都会受到影响。因此不能这么简单的操作。正确做法是：<strong>我们需要将簇中被删除的右侧的所有键重新插入散列表</strong>，这比想象中的要复杂！具体操作是：先判断被删除元素右边是否还有元素，如果没有则不用重新插入，如果有，则先保存那个元素，然后将其删除，再然后重新插入到散列表。</p>
+<p>（<strong>簇</strong>是指在元素插入数组后聚集成的一组连续的元素条）</p>
+<h2 id="代码举例-2">代码举例</h2>
+<p>这里的代码我们选择使用动态数组来实现。这段符号表的实现将键和值分别保存在两个数组中</p>
+<pre><code class="language-java">
+public class LinearProbingHashST&lt;Key, Value&gt;
+{
+	private int N;			//符号表中键值对总数
+	private int M = 16;		//线性探测表的大小
+	private Key[] keys;		//键
+	private Value[] vals;	//值
+	
+	public LinearProbingHashST()
+	{
+		keys = (Key[]) new Object[M];
+		vals = (Value[]) new Object[M];
+	}
+	public LinearProbingHashST(int cap)
+	{
+		// TODO Auto-generated constructor stub
+		keys = (Key[]) new Object[cap];
+		vals = (Value[]) new Object[cap];
+	}
+	private int hash(Key key)
+	{
+		return (key.hashCode() &amp; 0x7fffffff) % M;
+	}
+	private void resize(int cap)
+	{
+		LinearProbingHashST&lt;Key, Value&gt; t;
+		t = new LinearProbingHashST&lt;Key, Value&gt; (cap);
+		for(int i=0; i&lt;M; i++)
+		{
+			if((keys[i] != null))
+				t.put(keys[i], vals[i]);
+		}
+		keys = t.keys;
+		vals = t.vals;
+		M = t.M;
+	}
+	public void put(Key key, Value val)//往散列表中插入键值对
+	{
+		if(N &gt;= M/2)
+			resize(2*M);
+		int i ;
+		for(i = hash(key); keys[i] != null; i = (i + 1) % M)
+			if(keys[i].equals(key))
+			{
+				vals[i] = val;
+				return;
+			}
+		keys[i] = key;
+		vals[i] = val;
+		N++;
+	}
+	public void delete(Key key)//删除散列表中的键值对
+	{
+		if(!contain(key)) return;//如果要删除的元素不在散列表中则直接返回
+		int i = hash(key);
+		while(!key.equals(keys[i]))//依次寻找有无与key相同的键值元素
+			i = (i + 1) % M;
+		keys[i] = null;//删除键值对
+		vals[i] = null;//删除键值对
+		i = (i + 1) % M;//去到被删除元素的下一个键值对
+		while(keys[i] != null)//如果这个键值对不为空，则说明被删除元素后续有人
+		{
+			Key keyToReDo = keys[i];//用这个来储存将要重新插入的键值对
+			Value valToReDo = vals[i];
+			keys[i] = null;//先删除
+			vals[i] = null;
+			N--;
+			put(keyToReDo, valToReDo);//再重新插入到散列表
+			//相信我们的put()，能将这个键值对插入他应该待的位置
+			i = (i + 1) % M;//寻找下一个要重新插入的元素
+		}
+		N--;
+		if(N &gt; 0 &amp;&amp; N == M/8)
+			resize(M/2);
+	}
+	
+	private boolean contain(Key key)
+	{
+		if(get(key)==null)
+			return false;
+		else 
+			return true;
+	}
+	
+	public Value get(Key key)
+	{
+		for(int i=hash(key); keys[i] != null; i = (i + 1) % M)
+			if(keys[i].equals(key))
+				return vals[i];
+		return null;
+	}
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+
+	}
+
+}
+
+</code></pre>
 
                         </div>
                         
                             <div class="post-toc">
                                 <ul class="markdownIt-TOC">
-<li>
+<li><a href="#%E6%95%A3%E5%88%97%E5%87%BD%E6%95%B0">散列函数🤣</a>
 <ul>
-<li><a href="#%E5%85%B3%E4%BA%8E%E6%9C%AC%E7%AB%99">🏠 关于本站</a></li>
-<li><a href="#%E5%8D%9A%E4%B8%BB%E6%98%AF%E8%B0%81">👨‍💻 博主是谁</a></li>
-<li><a href="#%E5%85%B4%E8%B6%A3%E7%88%B1%E5%A5%BD">⛹ 兴趣爱好</a></li>
-<li><a href="#%E8%81%94%E7%B3%BB%E6%88%91%E5%91%80">📬 联系我呀</a></li>
+<li><a href="#%E6%AD%A3%E6%95%B4%E6%95%B0">正整数</a></li>
+<li><a href="#%E6%B5%AE%E7%82%B9%E6%95%B0">浮点数</a></li>
+<li><a href="#%E5%AD%97%E7%AC%A6%E4%B8%B2">字符串</a></li>
+<li><a href="#%E5%93%88%E5%B8%8C%E7%A0%81">哈希码</a></li>
+</ul>
+</li>
+<li><a href="#%E6%8B%89%E9%93%BE%E6%B3%95%E5%A4%84%E7%90%86%E7%A2%B0%E6%92%9E">拉链法处理碰撞👺</a>
+<ul>
+<li><a href="#%E5%8E%9F%E7%90%86">原理</a></li>
+<li><a href="#%E4%BB%A3%E7%A0%81%E4%B8%BE%E4%BE%8B">代码举例</a></li>
+</ul>
+</li>
+<li><a href="#%E5%9F%BA%E4%BA%8E%E7%BA%BF%E6%80%A7%E6%8E%A2%E6%B5%8B%E6%B3%95%E7%9A%84%E6%95%A3%E5%88%97%E8%A1%A8">基于线性探测法的散列表🤣</a>
+<ul>
+<li><a href="#%E5%8E%9F%E7%90%86-2">原理</a></li>
+<li><a href="#%E4%BB%A3%E7%A0%81%E4%B8%BE%E4%BE%8B-2">代码举例</a></li>
 </ul>
 </li>
 </ul>
@@ -277,7 +475,7 @@ BILIBILI https://space.bilibili.com/3088812</p>
 
                                             <p class="copyright-item">
                                                 <span>Permalink:</span>
-                                                <span><a href="https://shame41.github.io/post/about/">https://shame41.github.io/post/about/</a></span>
+                                                <span><a href="https://shame41.github.io/post/ha-xi-biao/">https://shame41.github.io/post/ha-xi-biao/</a></span>
                                             </p>
 
                                             <p class="copyright-item">
@@ -292,9 +490,9 @@ BILIBILI https://space.bilibili.com/3088812</p>
                                                         <span style="margin-right:15px">
                                                     <i class="post-share"></i>
                                                     <span>Share:</span>
-                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://shame41.github.io/post/about/"><i class="fa fa-qrcode"></i></a>
-                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://shame41.github.io/post/about/&sharesource=qzone&title=关于&pics=https://shame41.github.io/images/avatar.png?v=1619601640796&summary="><i class="fa fa-qq"></i></a>
-                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://shame41.github.io/post/about/&sharesource=weibo&title=关于 + " - " + &pic="https://shame41.github.io/images/avatar.png?v=1619601640796 "><i class="fa fa-weibo "></i></a>
+                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://shame41.github.io/post/ha-xi-biao/"><i class="fa fa-qrcode"></i></a>
+                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://shame41.github.io/post/ha-xi-biao/&sharesource=qzone&title=哈希表&pics=https://shame41.github.io/images/avatar.png?v=1619601640796&summary="><i class="fa fa-qq"></i></a>
+                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://shame41.github.io/post/ha-xi-biao/&sharesource=weibo&title=哈希表 + " - " + &pic="https://shame41.github.io/images/avatar.png?v=1619601640796 "><i class="fa fa-weibo "></i></a>
                                                         
                                                             <div class="reward ">
                                                                 <div class="reward-button ">&yen;
@@ -323,7 +521,15 @@ BILIBILI https://space.bilibili.com/3088812</p>
                                                                                 <!---->
                                                                                 <section class="post-nav">
                                                                                     
+                                                                                        <a class="prev" rel="prev" href="https://shame41.github.io/post/er-cha-cha-zhao-shu/">
+                                                                                            二叉查找树
+                                                                                        </a>
+                                                                                        
                                                                                             
+                                                                                                <a class="next" rel="next" href="https://shame41.github.io/post/zi-fu-chuan-pai-xu/">
+                                                                                                    字符串排序
+                                                                                                </a>
+                                                                                                
                                                                                 </section>
                     </article>
                 </div>

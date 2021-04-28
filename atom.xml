@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://shame41.github.io</id>
     <title>shame41</title>
-    <updated>2021-04-28T05:33:10.677Z</updated>
+    <updated>2021-04-28T09:20:56.684Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://shame41.github.io"/>
     <link rel="self" href="https://shame41.github.io/atom.xml"/>
@@ -11,1384 +11,484 @@
     <icon>https://shame41.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, shame41</rights>
     <entry>
-        <title type="html"><![CDATA[算法（第四版）笔记]]></title>
-        <id>https://shame41.github.io/post/suan-fa-di-si-ban-bi-ji/</id>
-        <link href="https://shame41.github.io/post/suan-fa-di-si-ban-bi-ji/">
+        <title type="html"><![CDATA[无向图算法]]></title>
+        <id>https://shame41.github.io/post/wu-xiang-tu-suan-fa/</id>
+        <link href="https://shame41.github.io/post/wu-xiang-tu-suan-fa/">
         </link>
-        <updated>2021-03-07T06:06:41.000Z</updated>
-        <content type="html"><![CDATA[<h1 id="队列堆栈背包">队列/堆栈/背包</h1>
-<h2 id="链表">链表</h2>
-<h3 id="基本操作">基本操作</h3>
-<p>没啥好说的</p>
-<pre><code class="language-java">import java.util.Iterator;
-
-//单向链表
-public class LinkList&lt;Item&gt; implements Iterable&lt;Item&gt;
+        <updated>2021-04-28T09:17:39.000Z</updated>
+        <content type="html"><![CDATA[<p>在无向图中，我们只有两个对象<strong>边（edge)<strong>和</strong>顶点（vertex）</strong>。其中顶点用整数来表示，边不用表示，因为<strong>边是两个顶点直接的一种关系</strong>，只用判断两个顶点有无这种关系即可。</p>
+<h1 id="无向图的数据类型">无向图的数据类型🚗</h1>
+<p>在这里我们选择使用<strong>邻接表数组</strong>来表示无向图，即<mark>一个以顶点为索引的列表数组，其中每个元素都是和该顶点相邻的顶点</mark></p>
+<figure data-type="image" tabindex="1"><img src="https://shame41.github.io/post-images/1619601532746.png" alt="" loading="lazy"></figure>
+<p><img src="https://shame41.github.io/post-images/1619601559398.png" alt="" loading="lazy"><br>
+具体实现上，我们的数组选择一个<strong>背包(bag)数组</strong>因为顶点的邻接元素是没有优先级的，而背包内元素也没有优先级，很符合我们的要求。</p>
+<h2 id="代码举例">代码举例</h2>
+<p>下面实现了一个无向图的算法，但它不能单独工作，因为还需要实现一个背包的数据类型，如需要背包的源码，请看我的其他博客，当然你也可以自己实现。</p>
+<pre><code class="language-java">public class Graph
 {
-	private Node first;	//指向最早添加的结点的链接
-	private Node last;	//指向最后添加的结点的链接
-	private int N;		//队列中的元素数量
-	
-	private class Node
+	private final int V;		//顶点数目
+	private int E;				//边的数目
+	public Bag&lt;Integer&gt;[] adj;	//邻接表
+	public Graph(int V)
 	{
-		Item item;
-		Node next;
+		//创建一个顶点数目为V的图
+		this.V = V;
+		this.E = 0;
+		adj = (Bag&lt;Integer&gt;[]) new Bag[V];
+		for(int v = 0; v&lt;V; v++)
+			adj[v] = new Bag&lt;Integer&gt;();
+	}
+	public int V() {return V;}
+	public int E() {return E;}
+	public void addEdge(int v, int w)
+	{
+		adj[v].add(w);
+		adj[w].add(v);
+		E++;
+	}
+	public Iterable&lt;Integer&gt; adj(int v)
+	{
+		return adj[v];
 	}
 	public static void main(String[] args)
 	{
+		// TODO Auto-generated method stub
+
+	}
+
+}
+</code></pre>
+<p>注意，我们的这个图仅仅实现了将原有的结点连接!</p>
+<h1 id="深度优先搜索">深度优先搜索🚲</h1>
+<h2 id="原理">原理</h2>
+<p>深度优先搜索的策略是，Tremaux搜索</p>
+<ol>
+<li>选择一条没有被标记过的通道，在你走过的路上<strong>铺上绳子</strong></li>
+<li>标记所有你第一次路过的路口和通道</li>
+<li>当来到一个标记过的路口时，沿着绳子倒退回上一个路口</li>
+<li>当回退到的路口已经没有可以走的通道时继续回退</li>
+</ol>
+<p>可以证明，最终绳子会连接起点和终点（假如起点和终点是可连通的）</p>
+<p>这仅仅是一个热身，用代码实现上述步骤，需要通过<strong>递归</strong>来实现</p>
+<p>具体的实现方式是</p>
+<ol>
+<li>我们创建一个布尔数组marked，里边存放图的所有结点，用来表示<strong>是否被标记过</strong>。</li>
+<li>再创建一个数组edgeTo，来表示<strong>从起点到结点A的已知路径上的最后一个顶点</strong>，A就是索引，这个顶点就是索引上的元素。</li>
+<li>对起点s进行一个递归操作dfs( )</li>
+<li>这个操作<strong>会标记被操作过的顶点v</strong>，然后从这个顶点v的所有邻居结点里找<strong>没有被标记过的结点w</strong></li>
+<li>只要找到，就会将w的上一个结点设为v，即edgeTo[w] = v，意味着从起点到终点的路径上，经过w与v，并且二者是由同一条边连着的</li>
+<li><strong>然后继续对w进行操作dfs( )</strong>（递归的实现）</li>
+</ol>
+<figure data-type="image" tabindex="2"><img src="https://shame41.github.io/post-images/1619601588313.png" alt="" loading="lazy"></figure>
+<p>这样我们就得到了两个漂亮的数组，<strong>一个marked[]数组，索引是图的各个结点，如果元素为true则说明这个结点与起点相邻</strong>，<strong>一个edgeTo[]数组，索引是图的各个结点，元素是这个结点的“上一个结点”</strong>，通过这个数组，我们可以找到一条从起点到任意结点的路径。</p>
+<p>当然，直接的表示出一条从顶点到终点的路不是那么简单。</p>
+<p>具体的操作是：对于一个终点x，我们先让x = edgeTo[x]，意思是x结点沿着路径向终点移动，然后再将x压入栈中，不断重复上面的操作，就能得到一个栈顶是起点s的堆栈，对这个堆栈执行出栈操作，便能得到一条起点到终点的路径。</p>
+<h2 id="代码举例-2">代码举例</h2>
+<p>自行设计代码中所需的堆栈，或者在其他文章里找到</p>
+<pre><code class="language-java">import java.util.Stack;
+
+public class DFS
+{
+	private boolean[] marked;		//在这个顶点上调用过dfs()吗
+	private int[] edgeTo;			//从起点到一个顶点的已知路径上的最后一个顶点
+	private final int s;			//起点
+	
+	public DFS(Graph G, int s)
+	{
+		marked = new boolean[G.V()];
+		edgeTo = new int[G.V()];
+		this.s = s;
+		dfs(G, s);
+	}
+	private void dfs(Graph G, int v)
+	{
+		marked[v] = true;
+		for(int w : G.adj(v))
+			if(!marked[w])
+			{
+				edgeTo[w] = v;
+				dfs(G, w);
+			}
 	}
 	
-	public void add(Item item)
+	public boolean hasPathTo(int v)
 	{
-		//向表尾添加元素
-		Node oldlast = last;
-		last = new Node();
-		last.item = item;
-		last.next = null;
-		if(isEmpty()) 
-			first = last;
-		else
-			oldlast.next = last;
-		N++;
+		return marked[v];
 	}
-	
-	
-	public Node KeyFind(int k)
+	public Iterable&lt;Integer&gt; pathTo(int v)
 	{
-		//找到第k个结点（从零开始）并返回该节点
-		Node p = first;
-		if(k&gt;N||k&lt;0)
+		if(!hasPathTo(v))
 			return null;
-		else
+		Stack&lt;Integer&gt; path = new Stack&lt;Integer&gt;();
+		for(int x = v; x!= s; x = edgeTo[x])
+			path.push(x);
+		path.push(s);
+		return path;
+	}
+	
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+
+	}
+
+}
+
+</code></pre>
+<h1 id="广度优先搜索">广度优先搜索🛵</h1>
+<p>有时，我们会关注这个问题 <em>单点最短路径。从s到给定点v是否存在一条路径，如果有，找出最短的那条</em></p>
+<p>深度优先搜索不适合这个问题，而广度优先搜索是解决这个问题的关键！</p>
+<h2 id="原理-2">原理</h2>
+<p>我们要从s出发寻找v，广度优先搜索的做法是，从s开始，在所有<strong>由一条边就可以到达</strong>的顶点中寻找v，如果找不到，我们就继续在与s<strong>距离两条边</strong>的所有顶点中寻找v，如此一直进行。具体实现方法如下：</p>
+<ol>
+<li>创建一个<em>队列</em>来保存所有<strong>已经被标记过但其邻居节点还没有被检查过的顶点</strong></li>
+<li>与深度优先搜索一样创立一个edgeTo数组和marked数组</li>
+<li>将起点加入队列，并将marked[s]设为true</li>
+<li>如果队列不是空的，便让队列出列一个元素</li>
+<li>查看被出列的那个元素的所有邻居结点</li>
+<li>对于那几个邻居节点中没有被标记过的结点w，标记它，并使edgeTo[w] = v，然后将它入列</li>
+<li>重复第四步，直到队列为空</li>
+</ol>
+<h2 id="代码举例-3">代码举例</h2>
+<pre><code class="language-java">import java.util.Stack;
+
+public class BFS
+{
+	private boolean[] marked;		//到达该顶点的最短路径已知吗？
+	private int[] edgeTo;			//到达该顶点的已知路径上的最后一个顶点
+	private final int s;			//起点
+	
+	public BFS(Graph G, int s)
+	{
+		marked = new boolean[G.V()];
+		edgeTo = new int[G.V()];
+		this.s = s;
+		bfs(G, s);
+	}
+	private void bfs(Graph G, int s)
+	{
+		LinkListQueue&lt;Integer&gt; queue = new LinkListQueue&lt;Integer&gt;();
+		marked[s] = true;		//标记起点
+		queue.enqueue(s);		//将它加入队列
+		while(!queue.isEmpty())
 		{
-			for(int i=0; i&lt;k; i++)
-			{
-				p = p.next;
-			}
-			return p;
+			int v = queue.dequeue();//从队列中删去下一个顶点
+			for(int w : G.adj(v))
+				if(!marked[w])
+				{
+					edgeTo[w] = v;		//保存最短路径的最后一条边
+					marked[w] = true;	//标记它，因为最短路径已知
+					queue.enqueue(w);	//并将它加入队列中
+				} 
 		}
 	}
 	
-	public boolean delete(int k)
+	public boolean hasPathTo(int v)
 	{
-		//删除第k个结点（从零开始）
-		if(k&gt;N||k&lt;0)
-			return false;
-		
-		if(k==0)
-		{
-			first = first.next;
-			if(isEmpty())
-				last = null;
-			N--;
-		}
-		else
-		{
-			Node delNode = KeyFind(k-1);
-			if(k==N-1)
-			{
-				last = delNode;
-				delNode.next = null;
-			}
-			else
-			{
-				delNode.next = delNode.next.next;
-			}
-		}
-		return true;
+		return marked[v];
 	}
-
+	public Iterable&lt;Integer&gt; pathTo(int v)
+	{
+		if(!hasPathTo(v))
+			return null;
+		Stack&lt;Integer&gt; path = new Stack&lt;Integer&gt;();
+		for(int x = v; x!= s; x = edgeTo[x])
+			path.push(x);
+		path.push(s);
+		return path;
+	}
 	
-	public boolean isEmpty()	{return first == null;}
-	public int size()				{return N;}
-	@Override
-	public Iterator&lt;Item&gt; iterator()
-	{	return new ListIterator();	}
-	private class ListIterator implements Iterator&lt;Item&gt;
+	public static void main(String[] args)
 	{
-		private Node current = first;
-		public boolean hasNext() {return current != null;}
-		public void remove() {}
-		public Item next()
-		{
-			Item item = current.item;
-			current = current.next;
-			return item;
-		}
+		// TODO Auto-generated method stub
+
 	}
 
 }
-</code></pre>
-<p><mark>在表头插入</mark></p>
-<pre><code>1-&gt;2-&gt;3-&gt;4-&gt;5
-new temp//要插入的新节点
-new oldfirst = first
-first = temp
-first.next = oldlast
-N++
-0-&gt;1-&gt;2-&gt;3-&gt;4-&gt;5
-</code></pre>
-<p><mark>在表尾插入</mark></p>
-<pre><code>1-&gt;2-&gt;3-&gt;4-&gt;5
-new temp//要插入的节点
-new oldlast = last
-last = new temp
-last.next = null
-if(isEmpty())
-	first = last
-else
-	oldlast.next = last
-N++
-1-&gt;2-&gt;3-&gt;4-&gt;5-&gt;6
-</code></pre>
-<p><mark>从表头删除</mark></p>
-<pre><code>1-&gt;2-&gt;3-&gt;4
-first = first.next
-N--
-2-&gt;3-&gt;4
-</code></pre>
-<p><mark>从表尾删除</mark></p>
-<pre><code>1-&gt;2-&gt;3-&gt;4
-temp = first
-for(int i = 0; i&lt;N; i++)
-{	temp = temp.next
-	if(temp.next == null)
-	{
-    	temp = null
-    	break
-    }
-}
-N--
-1-&gt;2-&gt;3
-</code></pre>
-<p><mark>插入元素</mark></p>
-<pre><code>1-&gt;2-&gt;3-&gt;4
-//在2/3之间插入5
-new node = 5
-temp = first
-for(;;)
-{
-	temp = temp.next
-	if(temp == 2)
-	{
-		t = temp.next
-		temp.next = 5
-		5.next = t
-		break
-	}
-}
-N++
-1-&gt;2-&gt;5-&gt;3-&gt;4
-</code></pre>
-<p><mark>删除元素</mark></p>
-<pre><code>1-&gt;2-&gt;3-&gt;4
-//删除3
-temp = first
-for(;;)
-{
-	temp = temp.next
-	if(temp == 2)
-	{
-		temp.next = temp.next.next
-		break
-	}
-}
-N--
-1-&gt;2-&gt;4
-</code></pre>
-<p><mark>交换元素</mark></p>
-<pre><code>😂这个难倒我了，我还得钻研钻研
-</code></pre>
-<h2 id="动态数组">动态数组</h2>
-<h3 id="原理">原理</h3>
-<p>选择使用数组意味着必须先知道最大容量，在JAVA中，数组一旦创建，大小是无法改变的🤐</p>
-<p>所以基本思路是：有一个函数isFull()来判断数组是否满了，如果满了，我们就新建一个更大的数组，把我们的数组整个存到新的数组中，然后将原本的数组删除。</p>
-<p>具体操作时，我们在加入元素后，判断是否满了，如果满了，我们就新建一个更大的数组（通常是两倍），然后整个地把数组复制到新数组中；删除元素时，判断数组是否已经被删得只剩下四分之一（通常是四分之一，绝对不能大于等于二分之一），如果是，就新建一个最大长度为原数组最大长度一半的数组，再迁移整个数组</p>
-<h3 id="代码举例">代码举例</h3>
-<pre><code class="language-java">import java.util.Iterator;
 
-public class ResizingArrayStack&lt;Item&gt; implements Iterable&lt;Item&gt;
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[加权图算法]]></title>
+        <id>https://shame41.github.io/post/jia-quan-tu-suan-fa/</id>
+        <link href="https://shame41.github.io/post/jia-quan-tu-suan-fa/">
+        </link>
+        <updated>2021-04-28T09:12:42.000Z</updated>
+        <content type="html"><![CDATA[<p>与没有加权的图相比，加权图的边多了一个属性 <strong>权重</strong>，因此我们再也不能仅用两个结点的关系来表示边。</p>
+<h1 id="加权边的表示">加权边的表示🍏</h1>
+<p>加权图的一种表示方式就是<strong>仅仅用带权重的边来构成加权图，结点是边的属性</strong>（即边的两边都是哪些结点，结点的名字就是边的属性）。很显然，边只有两头，所以边的API很简单，只需指出<strong>它的权重是多少，它两头都是哪个结点</strong>即可。</p>
+<p>仔细阅读下面这串通俗易懂的代码，你就能完全理解加权边是怎样的存在</p>
+<pre><code class="language-java">//Weighte deges
+public class Edge implements Comparable&lt;Edge&gt;
 {
-	private Item[] a = (Item[]) new Object[1];	//栈元素
-	private int N = 0;							//元素数量
-	public boolean isEmpty()
-	{
-		return N == 0;
-	}
-	public int size()
-	{
-		return 	N;
-	}
-	public void resize(int max)
-	{
-		//整个算法的精髓，将栈移动到一个大小为max的新数组
-		Item[] temp = (Item[]) new Object[max];
-		for(int i = 0; i &lt; N; i++)
-			temp[i] = a[i];
-		a = temp;
-	}
-    public void push(Item item)
+    private final int v;                    //one of the vertices
+    private final int w;                    //another vertices
+    private final double weight;            //weights of edges
+
+    public Edge(int v, int w, double weight)
     {
-        if( N == a.length)
-            resize(2*a.length);
-        a[N++] = item;
+        this.v = v;
+        this.w = w;
+        this.weight = weight;
     }
-	public Item pop()
-	{	
-		Item item = a[--N];
-        a[N] = null; 	//避免对象游离
-        if(N &gt; 0 &amp;&amp; N == a.length/4)
-            resize(a.length/2);
-        return Item;
-	}
-    public Iterator&lt;Item&gt; iterator()
+    public double weight()
     {
-    	return new ReverseArrayIterator();    
-	}
-    private class ReverseArrayIterator() implements Iterator&lt;Item&gt;
+        return weight;
+    }
+    public int either()//to get one of the vertices of the two segments of the edge
     {
-        //支持先进后出的迭代器
-        private int i = N;
-        public boolean hasNext()
+        return v;
+    }
+    public int other(int vertex)//return the vertex that is on the other side of the parametes's vertex
+    {
+        if      (vertex == v)   return w;
+        else if (vertex == w)   return v;
+        else
+            throw new RuntimeException(&quot;Inconsistent edge&quot;);
+    }
+    public String toString()
+    {
+        return String.format(&quot;%d-%d %.2f &quot;, v,w,weight);
+    }
+
+    @Override
+    public int compareTo(Edge that) //the method to know which Edge's weight is bigger
+    {
+        if      (this.weight() &lt; that.weight())
+            return -1;
+        else if (this.weight() &gt; that.weight())
+            return +1;
+        else
+            return 0;
+    }
+}
+</code></pre>
+<h1 id="加权无向图">加权无向图🍎</h1>
+<p>在加权无向图的表示中，我们依然采取邻接表的表达方式。具体是：</p>
+<ol>
+<li>邻接表是用来装<strong>背包bag</strong>的</li>
+<li>每个顶点都有一个属于自己的背包</li>
+<li>背包里装着所有与顶点相邻的边</li>
+</ol>
+<p>发现没？在我们的无权图中，我们的邻接表也是用来装背包的，但背包里装的是与顶点相连的顶点，到这里却变成与顶点相邻的边。希望你能好好体会这个变化。</p>
+<figure data-type="image" tabindex="1"><img src="https://shame41.github.io/post-images/1619601299807.png" alt="" loading="lazy"></figure>
+<pre><code class="language-java">public class EdgeWeightedGraph
+{
+    private final int V;        //amount of vertices
+    private int E;              //amount of edges
+    private Bag&lt;Edge&gt;[] adj;    //A bag of edges around the vertices
+
+    public EdgeWeightedGraph(int V)
+    {
+        this.V = V;
+        this.E = 0;
+        adj = (Bag&lt;Edge&gt;[]) new Bag[V];
+        for(int v = 0; v&lt;V; v++)
+            adj[v] = new Bag&lt;Edge&gt;();
+    }
+
+    public int V() {return V;}
+    public int E() {return E;}
+
+    public void addEdge(Edge e)
+    {
+        int v = e.either();
+        int w = e.other(v);
+        adj[v].add(e);
+        adj[w].add(e);
+        E++;
+    }
+    public  Iterable&lt;Edge&gt; adj(int v)
+    {
+        return adj[v];
+    }
+    public Iterable&lt;Edge&gt; edges()
+    {
+        Bag&lt;Edge&gt; b = new Bag&lt;Edge&gt;();
+        for (int v = 0; v &lt; V; v++)
+            for(Edge e : adj[v])
+                if(e.other(v) &gt; v)
+                    b.add(e);
+        return b;
+    }
+}
+
+</code></pre>
+<h1 id="最小生成树">最小生成树🍉</h1>
+<p>图的<em>生成树</em> 是指它的一棵<strong>含有所有顶点的无环连通子图</strong>。而<strong>最小生成树</strong>则是这个图<strong>权重之和最小的生成树</strong>。</p>
+<p>图的最小生成树在实际生活中有非常广泛的用途，通信/电子/水利/计算机/公路/铁路/航空等...</p>
+<p>为了研究方便，我们在这里做一些规定：</p>
+<ol>
+<li>只考虑连通图</li>
+<li>边的权重不一定代表距离</li>
+<li>边的权重可以是0或者负数</li>
+<li>所有边的权重都不同</li>
+</ol>
+<h2 id="原理">原理</h2>
+<p>首先，我们给出树的两个最重要的性质：</p>
+<ol>
+<li>用一条边连接树中的<strong>任意两个顶点</strong>都会产生一个<strong>环</strong></li>
+<li>从树中删去一条边将会得到两棵独立的树</li>
+</ol>
+<p>有这两条性质，我们便能得到最小生成树的算法原理：<strong>切分定理</strong></p>
+<p>图的一种切分是将图的所有顶点分为两个<strong>非空且不重叠的</strong>两个集合。<strong>横切边</strong>是一条连接两个属于不同集合的顶点的边。</p>
+<p>而<strong>切分定理</strong>就是：再一幅加权图中，给定任意的切分，它的<strong>横切边中权重最小的那条边必然属于图的最小生成树</strong>。</p>
+<p><mark>当我们把所有权重最小的横切边都找到，我们就找到了最小生成树的边（贪心算法思想）</mark></p>
+<figure data-type="image" tabindex="2"><img src="https://shame41.github.io/post-images/1619601321089.png" alt="" loading="lazy"></figure>
+<p>​											（灰色结点与白色节点分别属于两个集合，红色的边就是横切边，最短的那条横切边就是最小生成树的边）</p>
+<figure data-type="image" tabindex="3"><img src="https://shame41.github.io/post-images/1619601342271.png" alt="" loading="lazy"></figure>
+<p>​																												（最小生成树的贪心算法）</p>
+<h2 id="prim算法">Prim算法</h2>
+<h3 id="原理-2">原理</h3>
+<p>prim算法的原理是：</p>
+<p>从只有一个顶点开始，这个顶点属于一个集合A，其他顶点属于另外的集合B，因此，<strong>这个顶点周围的所有边都是横切边</strong>，选择其中<strong>最小的</strong>那个横切边加入树中，而<strong>和那条边连接的顶点</strong>也因此进入了A集合，这时，A集合多出来了一个顶点，因此，<strong>除了这两个顶点之间的连线外</strong>（这个连线已经在生成树内）的所有<strong>和这两个顶点相连的边</strong>都是横切边.....一直这样寻找，直到B集合再也没有顶点。</p>
+<p>用代码来表示上边的内容，我们需要一个优先队列（小顶堆）来存储所有的横切边并用来选出最小的那一条，用布尔数组marked[]来表明哪条边符合这种情况(符合这种情况的<strong>边已经在树中，或者边的其中一端在树中</strong>，我们称它<strong>失效</strong>）。</p>
+<h3 id="延时prim">延时Prim</h3>
+<figure data-type="image" tabindex="4"><img src="https://shame41.github.io/post-images/1619601359216.png" alt="" loading="lazy"></figure>
+<pre><code class="language-java">public class LazyPrimMST
+{
+    private boolean[] marked;           //the vertices of MST
+    private LinkListQueue&lt;Edge&gt; mst;    //the edge of MST
+    private MinPQ&lt;Edge&gt; pq;             //the Edge which can devide two tree(including the failed part)
+
+    public LazyPrimMST(EdgeWeightedGraph G)
+    {
+        pq = new MinPQ&lt;Edge&gt;(G.E());
+        marked = new boolean[G.V()];
+        mst = new LinkListQueue&lt;&gt;();
+
+        visit(G, 0);            //suppose G is connected
+        while (!pq.isEmpty())
         {
-            return i &gt; 0;
-		}
-        public Item next()
-        {
-            return a[--i];
+            Edge e = pq.delMin();   //find the edge which has the least weight from pq
+
+            int v = e.either();
+            int w = e.other(v);
+            if(marked[v] &amp;&amp; marked[w])
+                continue;   //skip failed edge
+            mst.enqueue(e); //add the edge to MST
+            if(!marked[v])
+                visit(G, v);//add the vertex(v or w) to MST
+            if(!marked[w])
+                visit(G, w);
         }
-        public void remove()//必须要有的函数，因为实现了Iterator，必须重载，即使用不上
+    }
+
+    private void visit(EdgeWeightedGraph G, int v)
+    {
+        //mark the vertex v and add the edge which have connected vertex v and add all the edges whose vertices  have never been marked
+        marked[v] = true;
+        for(Edge e : G.adj(v))
+            if(!marked[e.other(v)])
+                pq.insert(e);
+    }
+    public Iterable&lt;Edge&gt; edges()
+    {
+        return mst;
+    }
+
+}
+</code></pre>
+<p>你可以注意到，我们将所有横切边都放在pq中，然后把最小的那条删除并将其加入MST。这种实现方式成为：<strong>延时Prim算法</strong>，时间成本是ElogE（最坏），空间成本是E。然而，当一幅图<strong>极其的稠密</strong>（现实生活中非常常见），那么E的值将远远大于V的值。为了解决这个问题，我们将再谈<strong>即时Prim算法</strong>，它的时间成本是ElogV，空间成本是V。</p>
+<h3 id="即时prim">即时Prim</h3>
+<p>即时Prim的原理也很简单。首先，我们令集合A是最小生成树，集合B不是。而集合B中，距离集合A最近的那些结点，与集合A有相邻的边，这些边也就是我们上面说的横切边。在延时Prim中，我们在拓展一个新节点时，将新节点的所有横切边都加入了优先队列，这是没有必要的！因为集合B中离集合A最近的那些节点里，<strong>有一些结点到树的距离可能不止一个</strong>（比如B中的结点1，到A中的结点2的距离为2，到A中结点3的距离为3，这时结点1到树的距离就有两种），<mark>我们只需让那些节点到树的距离中最短的那条加入优先队列即可</mark>，因为长的那条我们永远不会用上它，因此不必让它加入。</p>
+<p>具体的实现上，我们需要一个Edge[]数组edgeTo保存那些距离树最近的边，用一个distTo[]保存这条边的权重</p>
+<ol>
+<li>
+<p>如果顶点v不在树中但至少含有一条边和树相连，那么edgeTo[v]是将v和树连接的最短边，distTo[v]是这条边的权重</p>
+</li>
+<li>
+<p>所有这类顶点v保存在一条索引优先数组中（小顶堆），索引v关联的值是edgeTo[v]的边的权重</p>
+</li>
+</ol>
+<pre><code class="language-java">public class PrimMST
+{
+    private Edge[] edgeTo;          //the edge closest to ST
+    private double[] distTo;        //distTO[w] = edgeTo[w].weight();
+    private boolean[] marked;       //true when v is in the ST
+    private IndexMinPQ&lt;Double&gt; pq;  //effective cross-cutting edge
+
+    public PrimMST(EdgeWeightedGraph G)
+    {
+        edgeTo = new Edge[G.V()];
+        distTo = new double[G.V()];
+        marked = new boolean[G.V()];
+        for (int v = 0; v &lt; G.V(); v++)
+            distTo[v] = Double.POSITIVE_INFINITY;
+        pq = new IndexMinPQ&lt;Double&gt;(G.V());
+
+        distTo[0] = 0.0;
+        pq.insert(0,0.0);       //initialize pq with vertex 0 and weight 0
+        while (!pq.isEmpty())
+            visit(G, pq.delMin());      //add the nearest vertex to the ST
+
+    }
+    private void visit(EdgeWeightedGraph G, int v)
+    {
+        //add vertex v to the tree to refresh data
+        marked[v] = true;
+        for (Edge e : G.adj(v))
+        {
+            int w = e.other(v);
+            if (marked[w])
+                continue;       //v &amp; w become invalid
+            if (e.weight() &lt; distTo[w])
+            {
+                //the most suited Edge connecting w and ST becomes e
+                edgeTo[w] = e;
+
+                distTo[w] = e.weight();
+                if (pq.contains(w))         //refresh the MinPQ
+                    pq.change(w, distTo[w]);
+                else
+                    pq.insert(w, distTo[w]);
+            }
+        }
+    }
+    public Iterable&lt;Edge&gt; edges()
+    {
+        Bag&lt;Edge&gt; mst = new Bag&lt;Edge&gt;();
+        for (int v = 1; v&lt;edgeTo.length; v++)
+            mst.add(edgeTo[v]);
+        return mst;
     }
 }
 </code></pre>
-<h3 id="注意">注意</h3>
-<p><strong>Java是不支持泛型数组的</strong>，原书评价：“专家们仍然在争论这一点。你可能也需要成为专家才能理解它！对于初学者，请先了解<strong>共变数组</strong>（<em>covariant array</em>）和<strong>类型擦除</strong>（<em>type erasure</em>）”。但是如果你读过《Java编程思想》，你会发现里边介绍了一种实现泛型数组的方法👍</p>
-<pre><code>a = (Item[]) new Object[i];
-</code></pre>
-<h2 id="队列">队列🍟</h2>
-<p>说实在话没啥好说的，毕竟刷题经历不够多，待我变得更强再补充吧😯</p>
-<h3 id="代码举例-2">代码举例</h3>
-<pre><code class="language-java">import java.util.Iterator;
-
-//用链表实现的队列，可以入队出队、查询长度还有遍历，但是不能删除其中的元素也不能插队
-public class LinkListQueue&lt;Item&gt; implements Iterable&lt;Item&gt; 
-{
-	private Node first;	//指向最早添加的结点的链接
-	private Node last;	//指向最后添加的结点的链接
-	private int N;		//队列中的元素数量
-	
-	private class Node
-	{
-		Item item;
-		Node next;
-	}
-	
-	public void enqueue(Item item)
-	{
-		//向表尾添加元素
-		Node oldlast = last;
-		last = new Node();
-		last.item = item;
-		last.next = null;
-		if(isEmpty()) 
-			first = last;
-		else
-			oldlast.next = last;
-		N++;
-	}
-	
-	public Item dequeue()
-	{
-		//从表头删除元素并将其返回
-		Item item = first.item;
-		first = first.next;
-		if(isEmpty())
-			last = null;
-		N--;
-		return item;
-	}
-	
-	public static void main(String[] args)
-	{
-		LinkListQueue&lt;Integer&gt; a = new LinkListQueue&lt;Integer&gt;();
-		a.enqueue(1);
-		a.enqueue(2);
-		a.enqueue(3);
-		a.enqueue(4);
-		for(Integer c : a)
-			System.out.println(c);
-	}
-
-	@Override
-	public Iterator&lt;Item&gt; iterator()
-	{	return new ListIterator();	}
-	private class ListIterator implements Iterator&lt;Item&gt;
-	{
-		private Node current = first;
-		public boolean hasNext()
-		{	return current != null;	}
-		public void remove() {}//尽量不要使用这个方法
-		public Item next()
-		{
-			Item item = current.item;
-			current = current.next;
-			return item;
-		}
-	}
-	public boolean isEmpty()	{return first == null;}
-	public int size()				{return N;}
-	
-}
-</code></pre>
-<h2 id="堆栈">堆栈🌭</h2>
-<p>我也没啥好说的...</p>
-<h3 id="代码举例-3">代码举例</h3>
-<pre><code class="language-java">import java.util.Iterator;
-
-//用链表实现的堆栈队列，可以出栈入栈、查询长度还有遍历，但是不能删除其中的元素也不能插入
-public class LinkListStack&lt;Item&gt; implements Iterable&lt;Item&gt; 
-{
-	private Node first;	//指向最早添加的结点的链接
-	private int N;		//队列中的元素数量
-	
-	private class Node
-	{
-		Item item;
-		Node next;
-	}
-	
-	public void push(Item item)
-	{
-		//向栈顶添加元素
-		Node oldfirst = first;
-		first = new Node();
-		first.item = item;
-		first.next = oldfirst;
-		N++;
-	}
-	
-	public Item pop()
-	{
-		//从栈顶删除元素并将其返回
-		Item item = first.item;
-		first = first.next;
-		N--;
-		return item;
-	}
-	
-	public static void main(String[] args)
-	{
-		// TODO Auto-generated method stub
-		LinkListStack&lt;Integer&gt; a = new LinkListStack&lt;Integer&gt;();
-		a.push(1);
-		a.push(2);
-		a.push(3);
-		a.push(4);
-		for(Integer i : a)
-			System.out.println(i);
-	}
-
-	@Override
-	public Iterator&lt;Item&gt; iterator()
-	{	return new ListIterator();	}
-	private class ListIterator implements Iterator&lt;Item&gt;
-	{
-		private Node current = first;
-		public boolean hasNext()
-		{	return current != null;	}
-		public void remove() {}//尽量不要使用这个方法
-		public Item next()
-		{
-			Item item = current.item;
-			current = current.next;
-			return item;
-		}
-	}
-	public boolean isEmpty()	{return first == null;}
-	public int size()				{return N;}
-	
-}
-</code></pre>
-<h2 id="背包">背包🍿</h2>
-<p>背包没有顺序，但是代码是死的，所以一定是确定的，因此，我们通常让背包顺序存放，<strong>仅仅是因为这样比较好实现</strong>，不要在乎</p>
-<h3 id="代码举例-4">代码举例</h3>
-<pre><code class="language-java">import java.util.Iterator;
-
-public class Bag&lt;Item&gt; implements Iterable&lt;Item&gt;
-{
-	private Node first;
-	private class Node
-	{
-		Item item;
-		Node next;
-	}
-	public void add(Item item)
-	{
-		Node oldfirst = first;
-		first = new Node();
-		first.item = item;
-		first.next = oldfirst;
-	}
-	public Iterator&lt;Item&gt; iterator()
-	{
-		return new ListIterator();
-	}
-	private class ListIterator implements Iterator&lt;Item&gt;
-	{
-		private Node current = first;
-		public boolean hasNext()
-		{
-			return current != null;
-		}
-		public void remove() {}
-		public Item next()
-		{
-			Item item = current.item;
-			current = current.next;
-			return item;
-		}
-	}
-	public static void main(String[] args)
-	{
-		// TODO Auto-generated method stub
-		Bag&lt;Integer&gt; a = new Bag&lt;Integer&gt;();
-		a.add(1);
-		a.add(2);
-		a.add(3);
-		for(Integer i : a)
-			System.out.println(i);
-	}
-
-}
-
-</code></pre>
-<h1 id="排序">排序</h1>
-<p>所有的排序算法都是用在数组上，链表的排序之后会有更好的选择（链表排序Leetcode上是中等题😓）</p>
-<h2 id="初级排序算法">初级排序算法</h2>
-<h3 id="选择排序">选择排序🍕</h3>
-<h4 id="原理-2">原理</h4>
-<p>首先，找到数组中的最小元素，其次将他和数组中的第一个元素交换位置。再次，在剩下的元素中，找到最小的元素将它与数组第二个元素交换位置。如此反复，直到将整个数组排序，这种排序叫做选择排序，它在<strong>不断选则剩余元素中的最小者</strong></p>
-<p>它有两个鲜明特点：</p>
-<p><strong>运行时间与输入无关</strong>： 一个已经有序的数组和一个混乱的数组都要经历<mark>N次交换</mark>和<mark>N^2/2次比较</mark></p>
-<p><strong>数据移动是最少的</strong>： 只移动了线性级别的次数</p>
-<h4 id="代码举例-5">代码举例</h4>
-<pre><code class="language-java">import java.util.Scanner;
-
-public class Selection
-{
-	public static void sort(Comparable[] a)//指的是任何实现comparable的数组，包括Integer/Double/等等（但是不包括int/double）
-	{
-		//将a[]按升序排列
-		int N = a.length;
-		for(int i=0; i&lt;N; i++)
-		{
-			//将a[i]和a[i+1..N]中最小的元素交换
-			int min = i;//最小元素的索引
-			for(int j = i+1; j&lt;N; j++)
-				if(less(a[j],a[min]))
-					min = j;//找到未排序序列中的最小元素
-			exch(a,i,min);
-		}
-	}
-	
-	private static boolean less(Comparable v, Comparable w)
-	{	return v.compareTo(w) &lt; 0;	}
-	private static void exch(Comparable[] a, int i, int j)
-	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
-	private static void show(Comparable[] a)
-	{
-		//在单行中打印数组
-		for(int i = 0; i&lt;a.length; i++)
-			System.out.print(a[i]+&quot; &quot;);
-	}
-	public static boolean isSorted(Comparable[] a)
-	{
-		//测试数组元素是否有序
-		for (int i=0; i&lt;a.length; i++)
-			if(less(a[i],a[i-1]))	return false;
-		return true;
-	}
-	
-	public static void main(String[] args)
-	{
-		Integer[] a = new Integer[10];
-		Scanner input = new Scanner(System.in);
-		for(int i = 0; i&lt;10; i++)
-			a[i] = input.nextInt();
-		for(int i = 0; i&lt;10; i++)
-			System.out.println(a[i]);
-		System.out.println(&quot;now let's sort it&quot;);
-		Selection.sort(a);
-		for(Integer i : a)
-			System.out.println(i);
-	}
-
-}
-</code></pre>
-<h3 id="插入排序">插入排序🍔</h3>
-<h4 id="原理-3">原理</h4>
-<p>将每一个元素插入到<strong>其他已经有序</strong>的元素中的适当位置，为了给要插入的元素腾出空间我们需要将其余所有元素在插入之前都向右移动一位，这就是插入排序。</p>
-<p>和选择排序不同的是，插入排序所需时间取决于输入中元素的初始顺序。</p>
-<p><strong>但是</strong>原理中插入元素时，要把其余元素右移一位，<strong>很显然这对于数组来说是很困难的</strong>，这里的一个取巧方案就是：选择第二个元素为<strong>索引</strong>，让它从左到右移动，每移动一格，<strong>就对索引左边元素进行一次冒泡排序</strong>，使新加入索引左边的元素能放在合适的位置</p>
-<p>选择排序有一个特点，使它具有重要的意义</p>
-<p>形如 2 1 4 3 6 5 8 7 10 9的数组 其中1-2，3-4.....成为一对<strong>倒置</strong></p>
-<p>当数组中倒置<strong>小于数组大小的某个倍数（11，22，33....)</strong>，那么这个数组就是<mark>部分有序的数组</mark></p>
-<p><strong>选择排序对于部分有序数组很有效</strong></p>
-<h4 id="代码举例-6">代码举例</h4>
-<pre><code class="language-java">import java.util.Scanner;
-
-public class Insertion
-{
-	public static void sort(Comparable[] a)
-	{
-		//将a[]按升序排序
-		int N = a.length;
-		for(int i=1; i&lt;N; i++)
-		{	//第一个元素已经排好
-			//将未排序的元素一个一个插入已排好的部分中
-			for(int j = i; j&gt;0 &amp;&amp; less(a[j],a[j-1]); j--)
-				exch(a, j, j-1);//在a[]中找到合适的位置插入并将后边的元素往后移
-			//这一步不是很好理解，可以试着自己画一画
-		}
-	}
-
-
-	private static boolean less(Comparable v, Comparable w)
-	{	return v.compareTo(w) &lt; 0;	}
-	private static void exch(Comparable[] a, int i, int j)
-	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
-	private static void show(Comparable[] a)
-	{
-		//在单行中打印数组
-		for(int i = 0; i&lt;a.length; i++)
-			System.out.print(a[i]+&quot; &quot;);
-	}
-	public static void main(String[] argvs)
-	{
-		Integer[] a = new Integer[10];
-		Scanner input = new Scanner(System.in);
-		for(int i = 0; i&lt;10; i++)
-			a[i] = input.nextInt();
-		for(int i = 0; i&lt;10; i++)
-			System.out.println(a[i]);
-		System.out.println(&quot;now let's sort it&quot;);
-		Insertion.sort(a);
-		for(Integer i : a)
-			System.out.println(i);
-	}
-	
-}
-</code></pre>
-<h3 id="希尔排序">希尔排序🥓</h3>
-<p>基于插入排序的一种算法，性能优越，但人们仍未能确定它的确切性能</p>
-<p>有经验的程序员有时会选择希尔排序，因为对于中等大小的数组它的运行时间是可以接受的，且代码量很小，还不需要使用额外的内存空间</p>
-<p><s>更有经验的程序员用.sort</s></p>
-<h4 id="原理-4">原理</h4>
-<p>希尔排序的中心思想就是：使数组中<strong>任意间隔为h</strong>的元素都是有序的，称之为<strong>h有序数组</strong>，可以证明，<mark>如果h是以1结尾</mark>（<em>注意，h是一个数列，以1结尾意味着最后h总会为1</em>），我们都有能将这个h数组排好。</p>
-<p>实现希尔排序的一种做法是，对于每个h，用插入排序将h个子数组独立地排序。但因为各个子数组相互独立，一种更简单的方法是 在h-子数组中将每个元素交换到比他大的元素之前去（将比它大的元素向右移动一格）。只需在插入排序的代码中将移动的元素的距离由1改为h即可。</p>
-<p>我们在实现使，h不是不变的，h是一个递增的数列，这次我们使用<mark>h = 1/2((3^k) - 1)</mark>  为什么要选择这个数组？很难回答，这涉及到希尔排序复杂的数学性质 。</p>
-<p>接下来说说具体实现步骤</p>
+<figure data-type="image" tabindex="5"><img src="https://shame41.github.io/post-images/1619601424610.png" alt="" loading="lazy"></figure>
+<p>以此图为例：</p>
 <ol>
-<li>知道需要排序的数组的长度N</li>
-<li>h = 1/2((3^k) - 1)</li>
-<li>求出小于N/3的最大h</li>
-<li>进行距离为h的插入排序</li>
-<li>h = h/3</li>
-<li>再次排序...</li>
-<li>h = 1是最后一次排序</li>
+<li>先让所有顶点到树的距离为无穷大</li>
+<li>将顶点0添加到最小生成树当中，将它的邻接表中的所有边加入优先队列中（<strong>因为周围顶点到树的距离只有一种：到达0顶点，所以是最短的</strong>）</li>
+<li>选择最短的那条边，指向的是7，因此让0-7与7离开优先队列，进入树，标记它，以便说明它已经是最小生成树的一员</li>
+<li>对于7的所有邻接边，<strong>如果已经被标记过，则跳过</strong>，否则，判断 究竟是<strong>这条边的权重</strong>小，还是<strong>边的另一端的顶点到树的距离</strong>小，如果前者小，就判断该顶点是否存在于优先队列，如果该顶点已经存在与优先队列中，则修改它到树的距离，如果不存在，那就将这个顶点加入优先队列；如果后者小，那这条边就失效</li>
+<li>然后再继续检测优先队列的下一个结点直到优先队列为空</li>
 </ol>
-<h4 id="代码举例-7">代码举例</h4>
-<pre><code class="language-java">import java.util.Random;
-
-public class Shell
-{
-	public static void sort(Comparable[] a)
-	{
-		//将a[]按升序排列
-		int N = a.length;
-		int h = 1;
-		while(h &lt; N/3)
-			h = 3*h + 1;//h有1,4,13,40,121,364,1093...//注意，这个序列不一定是最好的，但已经够用
-        //值得一提 h = 3*h +1是 h = 1/2((3^k) - 1)的递归形式
-		while(h&gt;=1)
-		{
-			//将数组变为h有序
-			for(int i=h; i&lt;N; i++)
-			{
-				//插入排序外循环
-				for(int j=i; j&gt;=h &amp;&amp; less(a[j],a[j-1]); j-=h)
-					exch(a, j, j-h);
-			}	
-			h = h/3;//间隔会越来越小，知道h为1时排好
-		}
-	}
-	private static boolean less(Comparable v, Comparable w)
-	{	return v.compareTo(w) &lt; 0;	}
-	private static void exch(Comparable[] a, int i, int j)
-	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
-	private static void show(Comparable[] a)
-	{
-		//在单行中打印数组
-		for(int i = 0; i&lt;a.length; i++)
-			System.out.print(a[i]+&quot; &quot;);
-	}
-
-	
-	public static void main(String[] args)
-	{
-		// TODO Auto-generated method stub
-		Random r = new Random(1);
-		Integer[] a = new Integer[100];
-		for (int i = 0; i&lt;a.length; i++)
-		{
-			a[i] = r.nextInt()%1000;
-		}
-		for(Integer i : a)
-			System.out.println(i);
-		System.out.println(&quot;now let's sort it!&quot;);
-		Shell.sort(a);
-		for(Integer i : a)
-			System.out.println(i);
-	}
-
-}
-</code></pre>
-<h2 id="归并排序">归并排序</h2>
-<p>一种优雅的递归算法，它能保证将任意长度为N的数组排序所需的时间和NlogN成正比，缺点也很明显，它所需要的<em>额外</em>空间和N成正比</p>
-<h3 id="原地归并的抽象方法">原地归并的抽象方法🍳</h3>
-<p>整个归并排序的核心😱</p>
-<h4 id="原理-5">原理</h4>
-<p>它的原理很简单</p>
-<ol>
-<li>将要归并的数组复制到一个新数组</li>
-<li>将复制的数组分成两份</li>
-<li>分成两份后，每个数组的开头都有一个索引，原数组也有一个索引</li>
-<li>接下来将两个数组索引所指的元素进行比较</li>
-<li>比较后，把小的那个元素放到原来的数组的索引的位置（也即是开头）</li>
-<li>然后小的那个元素所在的数组的索引加1，即往右走，原数组的索引也加1</li>
-<li>一直重复，会有几种结束的情况：左半边取尽（解决方法就是之后一直取右半边元素），右半边取尽（与前者相反），原数组索引走到尽头（结束）</li>
-</ol>
-<p>但值得注意的是，我们仅仅是进行了<em>归并</em>这个操作，意味着两个数组的左边元素总小于右边元素，但不意味着它已经有序了</p>
-<p>####代码举例</p>
-<pre><code class="language-java">public static void merge(Comparable[] a, int lo, int mid, int hi)
-	{
-		//整个归并排序的灵魂，将两个数组原地归并
-		int i = lo, j = mid+1;
-		
-		for(int k=lo; k &lt;= hi; k++)//将a[lo..hi]整个复制到aux[lo...hi]
-			aux[k] = a[k];
-		for(int k=lo; k &lt;= hi; k++)//有两个游标 i j,分别对应左边和右边
-			if		(i &gt; mid)				a[k] = aux[j++];//左半边已经没有元素了
-			else if (j &gt; hi )				a[k] = aux[i++];//右半边已经没有元素了
-			else if (less(aux[j], aux[i]))	a[k] = aux[j++];//左半边当前值大于右半边当前值
-			else 							a[k] = aux[i++];//右半边当前值大于左半边当前值
-	}
-</code></pre>
-<h3 id="自顶向下的归并排序">自顶向下的归并排序🥞</h3>
-<p>本算法基于<strong>原地归并的抽象方法</strong>实现了另一种归并排序，这也是应用高效算法设计中<strong>分治思想</strong>的最典型的一个例子</p>
-<h4 id="原理-6">原理</h4>
-<p>实现上，相当于，先<strong>递归地</strong>把数组从中间分开，1变2，2变4，4变8....直到每个数组只有一个元素，然后再通过原地归并，<strong>递归地</strong>将数组归并，因为我们再分开数组的阶段已经递归了，因此归并使不必再递归（因为递归地实现 把数组分开 这个操作本身的“返回”必然是递归的，可以利用这个“返回”的递归）</p>
-<p>要理解归并排序就要了解这里的<strong>递归</strong>究竟是如何实现的</p>
-<figure data-type="image" tabindex="1"><img src="C:%5CUsers%5CAdministrator%5CDesktop%5C834468-20161016231421733-1908940953.png" alt="" loading="lazy"></figure>
-<h4 id="代码举例-8">代码举例</h4>
-<pre><code>import java.util.Random;
-
-//自顶向下的归并排序
-public class MergeUD
-{
-	private static Comparable[] aux;
-	
-	public static void sort(Comparable[] a)
-	{
-		aux = new Comparable[a.length];//一次性分配空间
-		sort(a, 0, a.length -1);
-	}
-	
-	private static void sort(Comparable[] a, int lo, int hi)
-	{
-		//将数组a[lo...hi]排序（递归地
-		if(hi &lt;= lo) return;
-		int mid = lo + (hi - lo) /2;
-		sort(a, lo, mid);//排序左半边
-		sort(a, mid+1, hi);//排序右半边
-		merge(a, lo, mid, hi);//归并结果
-	}
-	public static void merge(Comparable[] a, int lo, int mid, int hi)
-	{
-		//整个归并排序的灵魂，将两个数组原地归并
-		int i = lo, j = mid+1;
-		
-		for(int k=lo; k &lt;= hi; k++)//将a[lo..hi]整个复制到aux[lo...hi]
-			aux[k] = a[k];
-		for(int k=lo; k &lt;= hi; k++)//有两个游标 i j,分别对应左边和右边
-			if		(i &gt; mid)				a[k] = aux[j++];//左半边已经没有元素了
-			else if (j &gt; hi )				a[k] = aux[i++];//右半边已经没有元素了
-			else if (less(aux[j], aux[i]))	a[k] = aux[j++];//左半边当前值大于右半边当前值
-			else 							a[k] = aux[i++];//右半边当前值大于左半边当前值
-	}
-	public static void main(String[] args)
-	{
-		// TODO Auto-generated method stub
-		Random r = new Random(1);
-		Integer[] a = new Integer[10];
-		for (int i = 0; i&lt;a.length; i++)
-		{
-			a[i] = r.nextInt()%10;
-		}
-		for(Integer i : a)
-			System.out.println(i);
-		System.out.println(&quot;now let's sort it!&quot;);
-		MergeUD.sort(a);
-		for(Integer i : a)
-			System.out.println(i);
-	}
-	private static boolean less(Comparable v, Comparable w)
-	{	return v.compareTo(w) &lt; 0;	}
-	private static void exch(Comparable[] a, int i, int j)
-	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
-	private static void show(Comparable[] a)
-	{
-		//在单行中打印数组
-		for(int i = 0; i&lt;a.length; i++)
-			System.out.print(a[i]+&quot; &quot;);
-	}
-	public static boolean isSorted(Comparable[] a)
-	{
-		//测试数组元素是否有序
-		for (int i=0; i&lt;a.length; i++)
-			if(less(a[i],a[i-1]))	return false;
-		return true;
-	}
-	
-}
-</code></pre>
-<p>###自底向上的归并排序🍞</p>
-<p>自顶向上归并是将大问题分解成许多小问题，然后通过解决这些小问题来解决整个大问题，尽管我们考虑的问题是归并两个大数组，实际上我们归并的数组大多数都非常小。</p>
-<h4 id="原理-7">原理</h4>
-<p>实现归并排序的另一种方法是先归并那些微型数组，然后再成对归并得到的子数组，如此这般，直到我们将整个数组归并在一起。这种实现方法比标准递归方法所需的代码量更少。首先进行一个一个元素的归并，然后两个两个元素的归并，然后四个四个元素的归并....</p>
-<figure data-type="image" tabindex="2"><img src="C:%5CUsers%5CAdministrator%5CDesktop%5C%E8%87%AA%E5%BA%95%E5%90%91%E4%B8%8A.png" alt="" loading="lazy"></figure>
-<h4 id="代码举例-9">代码举例</h4>
-<pre><code class="language-java">import java.util.Random;
-
-//自底向上的归并排序
-public class MergeDU
-{
-	private static Comparable[] aux;  //辅助数组
-	
-	public static void sort(Comparable[] a)
-	{
-		//进行lgN次两两归并;
-		int N = a.length;
-		aux = new Comparable[N];
-		for(int sz=1; sz&lt;N; sz=sz+sz) //sz是每个子数组大小
-			for(int lo=0; lo&lt;N-sz; lo=lo+sz+sz)//lo：子数组索引
-				merge(a, lo, lo+sz-1, Math.min(lo+sz+sz-1, N-1));
-	}
-	public static void merge(Comparable[] a, int lo, int mid, int hi)
-	{
-		//整个归并排序的灵魂，将两个数组原地归并
-		int i = lo, j = mid+1;
-		
-		for(int k=lo; k &lt;= hi; k++)//将a[lo..hi]整个复制到aux[lo...hi]
-			aux[k] = a[k];
-		for(int k=lo; k &lt;= hi; k++)//有两个游标 i j,分别对应左边和右边
-			if		(i &gt; mid)				a[k] = aux[j++];//左半边已经没有元素了
-			else if (j &gt; hi )				a[k] = aux[i++];//右半边已经没有元素了
-			else if (less(aux[j], aux[i]))	a[k] = aux[j++];//左半边当前值大于右半边当前值
-			else 							a[k] = aux[i++];//右半边当前值大于左半边当前值
-	}
-	public static void main(String[] args)
-	{
-		Random r = new Random(1);
-		Integer[] a = new Integer[100];
-		for (int i = 0; i&lt;a.length; i++)
-		{
-			a[i] = r.nextInt()%1000;
-		}
-		for(Integer i : a)
-			System.out.println(i);
-		System.out.println(&quot;now let's sort it!&quot;);
-		MergeDU.sort(a);
-		for(Integer i : a)
-			System.out.println(i);
-	}
-	
-	private static boolean less(Comparable v, Comparable w)
-	{	return v.compareTo(w) &lt; 0;	}
-	private static void exch(Comparable[] a, int i, int j)
-	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
-	private static void show(Comparable[] a)
-	{
-		//在单行中打印数组
-		for(int i = 0; i&lt;a.length; i++)
-			System.out.print(a[i]+&quot; &quot;);
-	}
-	public static boolean isSorted(Comparable[] a)
-	{
-		//测试数组元素是否有序
-		for (int i=0; i&lt;a.length; i++)
-			if(less(a[i],a[i-1]))	return false;
-		return true;
-	}
-}
-</code></pre>
-<h4 id="链表的排序">链表的排序</h4>
-<p>值得一提的是，自底向上的归并排序非常适合于用链表组织的数据，然鹅，我不会😭，再努努力吧...</p>
-<h2 id="快速排序">快速排序</h2>
-<p>快速排序可能是应用最广泛的排序算法了。快速排序流行的原因是它实现简单，适用于各种不同输入数据且在一般应用中<mark>比其他排序算法都要快得多</mark>。</p>
-<p>快排一个引人注目的特点包括 <mark>它是原地排序</mark>（只需要一个很小的辅助栈），且将长度为N的的数组排序所需的时间和NlgN成正比。<mark>我们之前学过的任何算法都无法将这两个优点结合起来</mark>。它的缺点也很明显  <mark>极度的脆弱</mark>。实现时要非常小心才能避免低劣的性能。</p>
-<h3 id="基本快速排序">基本快速排序🥐</h3>
-<p>快速排序是一种<strong>分治的</strong>排序算法，它将一个数组分为两个子数组，将两部分独立地排序。</p>
-<p>快排与归并是互补的：</p>
-<ol>
-<li>
-<p>归并排序将数组分成两个子数组分别排序，并将有序的子数组归并以将整个数组排序</p>
-</li>
-<li>
-<p>快速排序是当两个子数组都有序时自然整个数组都有有序了</p>
-</li>
-</ol>
-<p>在了解快速排序的具体实现之前，有一个重要的概念 <strong>切分</strong>，切分会将a[j]元素放在数组中合适的位置，这个位置满足a[j]左边的元素都比a[j]小，a[j]右边的元素都比a[j]大，当我们递归地调用切分，可以很显然得到，整个数组都会被排好。</p>
-<p>那么切分该如何实现呢😐</p>
-<h4 id="原理-8">原理</h4>
-<p>通常我们选择第一个元素作切分元素，然后将小于这个切分元素的放数组左边，大于这个切分元素的放右边，然后<strong>递归地</strong>再将左边的数组和右边的数组分别进行切分。那么，怎样把这些元素放到切分元素的两边呢？</p>
-<ol>
-<li>
-<p>先选定<em>切分元素</em>，这里我们选择<mark>数组的第一个元素</mark></p>
-</li>
-<li>
-<p>一个索引指向切分元素右边第一个元素（也就是数组的第二个元素），一个指向数组最右边</p>
-</li>
-<li>
-<p>左索引向右一直扫描，找到比切分元素大的元素时停止</p>
-</li>
-<li>
-<p>右索引向左一直扫描，找到比切分元素大的元素时停止</p>
-</li>
-<li>
-<p>交换左右索引上的元素</p>
-</li>
-<li>
-<p>然后各索引继续，以当前位置为起点，继续上述操作，直到两个索引相遇</p>
-</li>
-<li>
-<p>最后，别忘了切分元素还放在数组第一位，这时我们要把它放到合适的位置</p>
-</li>
-<li>
-<p>可以证明，索引相遇的地方就是切分元素应该待的地方，所以交换第一个元素与索引相遇的地方的元素</p>
-</li>
-</ol>
-<p>这样，我们便完成了一次<strong>切分</strong>，接下来我们应该<strong>递归地</strong>对左右两边数组再次进行切分</p>
-<h4 id="代码举例-10">代码举例</h4>
-<pre><code class="language-java">import java.util.Random;
-
-public class Quick
-{
-	public static void sort(Comparable[] a)
-	{
-		sort(a, 0, a.length -1);
-	}
-	private static void sort(Comparable[] a, int lo, int hi)
-	{
-		//标准的快速排序
-		if(hi &lt;= lo)
-			return;
-		int j = partition(a, lo, hi);//切分，快排的关键点
-		sort(a, lo, j-1);//对左边排序
-		sort(a, j+1, hi);//对右边排序
-	}
-	private static int partition(Comparable[] a, int lo, int hi)
-	{
-		int i = lo, j = hi + 1;//左指针与右指针
-		Comparable v = a[lo];  //切分元素
-		while(true)
-		{
-			while(less(a[++i], v) )
-				if(i == hi) break;
-			//从左到右扫描找出第一个大于切分元素的单元
-			while(less(v, a[--j]) )
-				if(j == lo) break;
-			//从右到左扫描找出第一个小于切分元素的单元
-				
-			if(i &gt;= j) break;
-			exch(a, i, j);//交换两个单元
-		}
-		//注意此时切分元素仍然放在第一个位置，因此下一步要把它放到中间，而i,j已经在中间相遇，所以放在j处
-		exch(a, lo, j);//将v = a[j]放入正确的位置
-		return j;
-	}
-	private static boolean less(Comparable v, Comparable w)
-	{	return v.compareTo(w) &lt; 0;	}
-	private static void exch(Comparable[] a, int i, int j)
-	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
-	private static void show(Comparable[] a)
-	{
-		//在单行中打印数组
-		for(int i = 0; i&lt;a.length; i++)
-			System.out.print(a[i]+&quot; &quot;);
-	}
-	public static boolean isSorted(Comparable[] a)
-	{
-		//测试数组元素是否有序
-		for (int i=0; i&lt;a.length; i++)
-			if(less(a[i],a[i-1]))	return false;
-		return true;
-	}
-	
-	public static void main(String[] args)
-	{
-		Random r = new Random(1);
-		Integer[] a = new Integer[100];
-		for (int i = 0; i&lt;a.length; i++)
-		{
-			a[i] = r.nextInt()%1000;
-		}
-		for(Integer i : a)
-			System.out.println(i);
-		System.out.println(&quot;now let's sort it!&quot;);
-		Quick.sort(a);
-		for(Integer i : a)
-			System.out.println(i);
-
-	}
-
-}
-</code></pre>
-<h4 id="注意-2">注意</h4>
-<p>对于小数组来说，快速排序比插入排序满，并且，因为递归，快速排序的sort()方法在小数组中也会调用自己</p>
-<p>因此，在排序小数组时应该切换到插入排序。因此，可以对代码进行简单修改</p>
-<pre><code>if(hi &lt;= lo )
-	return;
-</code></pre>
-<p>变成</p>
-<pre><code>if(hi &lt;= lo + M)
-{
-	Insertion.sort(a, lo, hi);
-	return;
-}
-</code></pre>
-<h3 id="三向切分快速排序">三向切分快速排序🥨</h3>
-<p>我们的快速排序性能已经很好了，可是还有巨大的改进空间。例如，一个完全重复的子数组就不需要排序了，但我们的算法仍然会对它进行切分。所以，为了解决那些有大量重复元素的数组，我们选择一种名为<strong>三向切分</strong>的算法，又叫<strong>熵最优快速排序</strong>。</p>
-<h4 id="原理-9">原理</h4>
-<p>所谓<em>三向切分</em>，就是不同于普通的快排，只是分为左右两边数组，三向切分会把数组分为 <strong>左边 小； 中间 一样；右边 大</strong>。但是它的实现困扰了许多计算机学家。这里我们选择<strong>Dijkstra</strong>的切分方法。</p>
-<p>这里的实现，我们选择使用Comparable接口(而不是less())对a[i]进行三向比较。</p>
-<ol>
-<li>
-<p>我们维护四个索引 lo, hi, lt, gt, i</p>
-</li>
-<li>
-<p>选取数组第一个元素<strong>v</strong>为切分元素</p>
-</li>
-<li>
-<p>lo与lt索引指向数组第一个元素</p>
-</li>
-<li>
-<p>i指向数组第二个元素</p>
-</li>
-<li>
-<p>hi与gt索引指向数组最后一个元素</p>
-</li>
-<li>
-<p>让i所指的元素和切分元素比较</p>
-</li>
-<li>
-<p>如果<strong>a[i]小于v</strong>，交换a[lt]和a[i]，并将i和lt向右移动一格</p>
-</li>
-<li>
-<p>如果<strong>a[i]大于v</strong>，交换a[gt]和a[i]，并将gt向左移动一格</p>
-</li>
-<li>
-<p>如果<strong>a[i]等于v</strong></p>
-</li>
-<li>
-<p>一直重复6-&gt;9(7,8,9是互斥事件)，直到i遇见gt</p>
-</li>
-<li>
-<p>这样我们就已经完成了一次三向切分</p>
-</li>
-<li>
-<p>对左边和右边的元素再次<strong>递归地</strong>实现上面的过程，中间的元素可以不用动了</p>
-</li>
-</ol>
-<h4 id="代码举例-11">代码举例</h4>
-<pre><code class="language-java">import java.util.Random;
-
-public class Quick
-{
-	public static void sort(Comparable[] a)
-	{
-		sort3way(a, 0, a.length -1);
-	}
-	private static void sort3way(Comparable[] a, int lo, int hi)
-	{
-		//三切分快速排序，用来处理数据中有相同元素的数组的排序
-		if(hi &lt;= lo)
-			return;
-		int lt = lo, i = lo + 1, gt = hi;
-		Comparable v = a[lo];
-		while(i &lt;= gt)
-		{
-			int cmp = a[i].compareTo(v);
-			if		(cmp &lt; 0)
-				exch(a, lt++, i++);//放左边
-			else if (cmp &gt; 0)
-				exch(a, i, gt--);//放右边
-			else
-				i++;//留在原地，之后它就是在中间
-		}//这个循环实现了a[lo..lt-1] &lt; v = a[lt..gt] &lt; a[gt+1..hi]
-		sort3way(a, lo, lt - 1);
-		sort3way(a, gt + 1, hi);
-	}
-	private static boolean less(Comparable v, Comparable w)
-	{	return v.compareTo(w) &lt; 0;	}
-	private static void exch(Comparable[] a, int i, int j)
-	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
-	private static void show(Comparable[] a)
-	{
-		//在单行中打印数组
-		for(int i = 0; i&lt;a.length; i++)
-			System.out.print(a[i]+&quot; &quot;);
-	}
-	public static boolean isSorted(Comparable[] a)
-	{
-		//测试数组元素是否有序
-		for (int i=0; i&lt;a.length; i++)
-			if(less(a[i],a[i-1]))	return false;
-		return true;
-	}
-	
-	public static void main(String[] args)
-	{
-		Random r = new Random(1);
-		Integer[] a = new Integer[100];
-		for (int i = 0; i&lt;a.length; i++)
-		{
-			a[i] = r.nextInt()%1000;
-		}
-		for(Integer i : a)
-			System.out.println(i);
-		System.out.println(&quot;now let's sort it!&quot;);
-		Quick.sort(a);
-		for(Integer i : a)
-			System.out.println(i);
-
-	}
-
-}
-</code></pre>
-<h2 id="优先队列">优先队列</h2>
-<p>很多情况下，我们需要这么一种工具，它能非常快速地提供给我们一个数组中最大的元素(最小同理)。很显然，一种简单粗暴的解决方式就是在取出元素时排序整个数组，但是这样太慢了，因为我们只是要最大的，此时数组不一定要有序，因此我们引入一种工具：<strong>优先队列</strong></p>
-<h3 id="二叉堆优先队列">二叉堆优先队列🥖</h3>
-<p>这里我们只介绍二叉堆组成的优先队列，在最坏情况下，它能保证将元素插入或取出优先队列都只需要<strong>logN</strong>的复杂度，实现整体最优。👍</p>
-<h4 id="原理-10">原理</h4>
-<p><strong>二叉堆</strong>的定义</p>
-<ol>
-<li>
-<p>当一棵二叉树的每个节点都大于等于(小于等于同理)它的两个子节点时，它被称为<strong>堆有序</strong></p>
-</li>
-<li>
-<p>根节点是堆有序的二叉树的最值节点</p>
-</li>
-<li>
-<p><strong>二叉堆</strong>是一组能够用<strong>堆有序</strong>的<strong>完全二叉树</strong>（你不会不知道什么是完全二叉树吧）排序的元素，并在数组中按层级储存</p>
-</li>
-<li>
-<p>为了方便，<strong>我们不使用第一个节点</strong>，这样，位置为k的<strong>父节点的位置为k/2</strong>，两个<strong>子节点分别是2k或2k+1</strong></p>
-</li>
-</ol>
-<figure data-type="image" tabindex="3"><img src="C:%5CUsers%5CAdministrator%5CDesktop%5C%E6%96%B0%E5%BB%BA%E6%96%87%E4%BB%B6%E5%A4%B9%5C77c6a7efce1b9d16836da71efbdeb48f8c546422.png" alt="" loading="lazy"></figure>
-<p>堆有两个基本操作，<strong>插入元素</strong>，<strong>删除最值元素</strong></p>
-<p><strong>插入元素</strong>：我们将新元素加到数组末尾，然后增加堆的大小N，并让这个元素<strong>上浮</strong>到合适位置</p>
-<p><strong>删除最值元素</strong>：将数组顶端元素删去最大的元素并返回，然后<strong>把数组最后一个元素放到顶端</strong>，让这个元素<strong>下沉</strong>到合适位置</p>
-<p>我们所说的<strong>上浮</strong>与<strong>下沉</strong>指的是<strong>堆的有序化</strong>，即将元素放到它应在在的位置</p>
-<p><strong>上浮</strong>：如果堆的有序状态因为某个节点<strong>变得比它的父节点更大</strong>而被打破，那么我们就需要<strong>交换它和它的父节点</strong>来修复堆。很显然，交换后，这个节点比它的两个子节点更大，<strong>但这个节点仍然可能比它现在的父节点大</strong>，因此我们要重复上面的操作，直到有序。</p>
-<p><strong>下沉</strong>：如果堆的有序状态因为某个节点<strong>变得比它的两个子节点或者其中之一更小</strong>而被打破了，那么我们需要<strong>交换它和它的两个子节点中最大的那个</strong>来修复堆，不断重复上述操作，直到它的子节点都比它小或者到达了堆的底部。</p>
-<h4 id="代码举例-12">代码举例</h4>
-<p>值得一提的是，堆可以分为<strong>大顶堆</strong>和<strong>小顶堆</strong>，这里我们实现前者</p>
-<pre><code class="language-java">import java.util.Random;
-public class MaxPQ&lt;Key extends Comparable&lt;Key&gt;&gt;
-{
-	//基于堆的优先队列
-	private Key[] pq;	//基于堆的完全二叉树
-	private int N = 0;	//储存于pq[1..N]中，pq[0]没有使用
-	
-	public MaxPQ(int maxN)
-	{
-		pq = (Key[]) new Comparable[maxN+1];
-	}
-	public boolean isEmpty()
-	{
-		return N == 0;
-	}
-
-	public void insert(Key v)
-	{
-		pq[++N] = v;
-		swim(N);
-	}
-	public Key delMax()
-	{
-		Key max = pq[1];
-		exch(1, N--);
-		pq[N+1] = null;
-		sink(1);
-		return max;
-	}
-	
-	private boolean less(int i, int j)
-	{
-		return pq[i].compareTo(pq[j]) &lt; 0;
-	}
-	private void exch(int i, int j)
-	{
-		Key t = pq[i];
-		pq[i] = pq[j];
-		pq[j] = t;
-	}
-	private void swim(int k)//上浮
-	{
-		while(k&gt;1 &amp;&amp; less(k/2, k))
-		{
-			exch(k/2, k);
-			k = k/2;
-		}
-	}
-	private void sink(int k)
-	{
-		while(2*k &lt;= N)
-		{
-			int j = 2*k;
-			if(j&lt;N &amp;&amp; less(j, j+1))
-				j++;//确定两个子节点哪个更大
-			if(!less(k, j))
-				break;//再比较最大的子节点与父节点的关系
-			exch(k, j);
-			k = j;
-		}
-	}
-	
-	public static void main(String[] args)
-	{
-		// TODO Auto-generated method stub
-		MaxPQ&lt;Integer&gt; a = new MaxPQ(1000000);
-		Random r = new Random(13);
-		for (int i = 0; i&lt;1000000; i++)
-		{
-			a.insert(r.nextInt()%1000000);
-		}
-		System.out.println(a.delMax());
-	}
-
-}
-
-</code></pre>
-<h3 id="堆排序">堆排序🧀</h3>
-<p>如果将所有元素插入一个小顶堆，然后重复调用<strong>删除最小元素</strong>的操作来将它们按顺序删去。这就是堆排序。</p>
-<h4 id="原理-11">原理</h4>
-<p>堆排序有两个阶段 <strong>堆的构造</strong>，<strong>下沉排序</strong>。</p>
-<p><strong>堆的构造</strong>：我们将原始数组重新组织安排进一个堆中。一个无脑的方法，即从左到右遍历数组，对每个元素都进行上浮操作，这样能在NlogN内实现。可是这样<strong>太笨了</strong>😫  一种更聪明更高效的方法是 ：<strong>从N/2开始向左对数组中的元素进行下沉</strong>，为什么要这么做呢？因为由于<strong>完全二叉树</strong>的数学性质，可以发现，N/2之后的所有元素都是<strong>叶</strong>，显然，叶是不需要下沉的，所以我们只用下沉N/2之前的元素。</p>
-<p><strong>下沉排序</strong>：我们从堆中按<strong>递减顺序</strong>取出所有元素并得到排序结果。具体来说，我们将数组第一个元素(数组[0]是不用的，所以第一个元素是数组[1])<strong>与最后一个元素交换，然后下沉交换后的第一个元素</strong>。(与选择排序相似,但所需的比较少得多)</p>
-<h4 id="代码举例-13">代码举例</h4>
-<pre><code class="language-java">public class PQsort
-{
-	public static void sort(Comparable[] a)
-	{
-		//堆排序
-		int N = a.length;
-		Comparable[] pb = new Comparable[N+1]; 
-		for(int i=0; i&lt;N; i++)
-			pb[i+1] = a[i];
-		for(int k = N/2; k &gt;= 1; k--)
-			sink(pb, k, N);//用于构造大顶堆
-		while(N &gt; 1)
-		{
-			exch(pb, 1, N--);
-			sink(pb, 1, N);
-		}
-		for(int i=0; i&lt;a.length; i++)
-			a[i] = pb[i+1];
-	}
-	private static void sink(Comparable[] a, int k, int N)
-	{
-		while(2*k &lt;= N)
-		{
-			int j = 2*k;
-			if(j&lt;N &amp;&amp; less(a, j, j+1))
-				j++;
-			if(!less(a, k, j))
-				break;
-			exch(a, k, j);
-			k = j;
-		}
-	}
-	private static boolean less(Comparable[] pq, int i, int j)
-	{
-		return pq[i].compareTo(pq[j]) &lt; 0;
-	}
-	private static void exch(Comparable[] pq, int i, int j)
-	{
-		Comparable t = pq[i];
-		pq[i] = pq[j];
-		pq[j] = t;
-	}
-	private static void show(Comparable[] a)
-	{
-		//在单行中打印数组
-		for(int i = 0; i&lt;a.length; i++)
-			System.out.print(a[i]+&quot; &quot;);
-	}
-	public static void main(String[] args)
-	{
-		Integer[] a = {19,15,18,20,5,24,1,13,16,12,5};
-		sort(a);
-		show(a);
-	}
-
-}
-</code></pre>
-<h3 id="索引优先队列">索引优先队列🥗</h3>
-<p>我们的优先队列能做到的事情很少，只能向其中加入元素和获取并删除最值元素。然鹅在很多应用中，允许使用<mark>已经进入优先队列中的元素</mark>是很有必要的（如Dijkstra算法）。要做到这一点的一种简单方法就是给每个元素一个<strong>索引</strong>。</p>
-<h4 id="原理-12">原理</h4>
-<p>索引优先队列用一个<strong>整数</strong>和队列中的<strong>元素</strong>进行关联，这样，当我们要访问队列中的元素时，只需要用它所关联的整数进行索引查找就可以了。</p>
-<p>为此，我们创立三个数组  pq，qp，elements</p>
-<p>其中，pq[qp[i]] = qp[pq[i]] = i，这样，当我们想访问元素“b”时，我们就可以通过elements[10]来访问它（其中10是与&quot;b &quot;相关的整数），而当我们想要知道元素&quot;b&quot;在<strong>二叉堆</strong>中处于哪个位置时，我们可以通过qp[10]。到现在我们只用了两个数组(elements和qp)，那pq数组呢？</p>
-<p>首先，作为优先队列的一种，它一定能通过<strong>上浮</strong>和<strong>下沉</strong>来使堆<strong>有序化</strong>。在普通优先队列中，我们直接对队列的元素进行操作，而在索引优先队中，<strong>储存元素的数组已经不再具有二叉堆的性质</strong>，取而代之的使pq数组，因此在索引优先队列中，<strong>储存元素的数组用来快速索引查找，pq数组作为储存元素的数组的映射，具有堆的性质，因此我们的上浮下沉都是对pq数组操作而不是对储存元素的数组</strong>。</p>
-<p>当然，为了保持pq[qp[i]] = qp[pq[i]] = i的性质，我们在改变pq后也要相应改变qp</p>
-<figure data-type="image" tabindex="4"><img src="https://shame41.github.io/post-images/1615888769947.jpg" alt="" loading="lazy"></figure>
-<figure data-type="image" tabindex="5"><img src="https://shame41.github.io/post-images/1615888773668.jpg" alt="" loading="lazy"></figure>
-<h4 id="代码举例-14">代码举例</h4>
-<pre><code class="language-java">![u=2489824036,314288118&amp;fm=26&amp;gp=0](C:\Users\Administrator\Desktop\新建文件夹\u=2489824036,314288118&amp;fm=26&amp;gp=0.png)public class IndexMinPQ&lt;Key extends Comparable&lt;Key&gt;&gt;
-{
-	private int N;				//amount of the elements in PQ
-	private int[] pq;			//index binary heap, begin at '1'
-	private int[] qp;			//inverted pq : qp[pq[i]] = pq[qp[i]] = i
-	private Key[] keys;			//elements with priority
-	public IndexMinPQ(int maxN)
-	{
-		keys = (Key[]) new Comparable[maxN + 1];
-		pq = new int[maxN + 1];
-		qp = new int[maxN + 1];
-		for(int i = 0; i &lt;= maxN; i++)
-			qp[i] = -1;
-	}
-	private void exch(int i, int j)
-	{
-		int t = pq[i];
-		pq[i] = pq[j];
-		pq[j] = t;
-		t = qp[pq[i]];
-		qp[pq[i]] = qp[pq[j]];
-		qp[pq[j]] = t;
-	}
-	private void swim(int k)//上浮
-	{
-		while(k&gt;1 &amp;&amp; less(k/2, k))
-		{
-			exch(k/2, k);
-			k = k/2;
-		}
-	}
-	private void sink(int k)
-	{
-		while(2*k &lt;= N)
-		{
-			int j = 2*k;
-			if(j&lt;N &amp;&amp; less(j, j+1))
-				j++;
-			if(!less(k, j))
-				break;
-			exch(k, j);
-			k = j;
-		}
-	}
-	private boolean less(int i, int j)
-	{
-		return keys[pq[i]].compareTo(keys[pq[j]]) &gt; 0;
-	}
-	public boolean isEmpty()
-	{
-		return N == 0;
-	}
-	public boolean contains(int k)
-	{
-		return qp[k] != -1;
-	}
-	public void insert(int k, Key key)
-	{
-		N++;
-		qp[k] = N;
-		pq[N] = k;
-		keys[k] = key;
-		swim(N);
-	}
-	public Key min()
-	{
-		return keys[pq[1]];
-	}
-	public int delMin()
-	{
-		int indexOfMin = pq[1];
-		exch(1, N--);
-		sink(1);
-		keys[pq[N+1]] = null;
-		qp[pq[N+1]] = -1;
-		return indexOfMin;
-	}
-
-	public int minIndex()
-	{
-		return pq[1];
-	}
-	public void change(int k, Key key)
-	{
-		keys[k] = key;
-		swim(qp[k]);
-		sink(qp[k]);
-	}
-	public void delete(int k)
-	{
-		int index = qp[k];
-		exch(index, N--);
-		swim(index);
-		sink(index);
-		keys[k] = null;
-		qp[k] = -1;
-	}
-	public static void main(String[] args)
-	{
-		// TODO Auto-generated method stu
-		IndexMinPQ&lt;Integer&gt; a = new IndexMinPQ&lt;Integer&gt;(10);
-		a.insert(1,11);
-		a.insert(3,6);
-		a.insert(4,14);
-		a.insert(6,3);
-		a.insert(8,8);
-		a.insert(10,2);
-		a.delete(4);
-		System.out.println(a.minIndex());
-ercha
-	}
-
-}
-</code></pre>
-<p>#查找</p>
-<p>现代计算机和网络使我们能够访问海量数组。高效检索这些信息的能力是处理它们的重要前提！</p>
-<h2 id="二叉查找树">二叉查找树🥙</h2>
-<p>首先，我们需要定义一些术语。我们所使用的数据结构是由<strong>结点</strong>组成（后边我总是时不时打错成“节点”，无伤大雅），结点包括的<strong>链接</strong>可以为空（null）或者指向其他节点。在一个<strong>二叉树</strong>中，每个结点只能有一个父结点（根节点没有父结点），而且每个结点都只有<em>左右</em>两个链接，指向自己的<em>左子结点</em>和<em>右子节点</em>。在二叉查找树中，每个结点还包含了一个<strong>键</strong>和一个<strong>值</strong>。</p>
-<h3 id="构造">构造</h3>
+<h2 id="kruskal算法">Kruskal算法</h2>
+<p>这个算法的基本思路是，将所有顶点都视为一棵树，因此一幅图是一片森林。Kruskal要做的就是不断将两棵树连接起来（用可以找到的最短的边）直到只剩下一棵树，这棵树就是最小生成树。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[二叉查找树]]></title>
+        <id>https://shame41.github.io/post/er-cha-cha-zhao-shu/</id>
+        <link href="https://shame41.github.io/post/er-cha-cha-zhao-shu/">
+        </link>
+        <updated>2021-04-28T09:06:01.000Z</updated>
+        <content type="html"><![CDATA[<p>首先，我们需要定义一些术语。我们所使用的数据结构是由<strong>结点</strong>组成（后边我总是时不时打错成“节点”，无伤大雅），结点包括的<strong>链接</strong>可以为空（null）或者指向其他节点。在一个<strong>二叉树</strong>中，每个结点只能有一个父结点（根节点没有父结点），而且每个结点都只有<em>左右</em>两个链接，指向自己的<em>左子结点</em>和<em>右子节点</em>。在二叉查找树中，每个结点还包含了一个<strong>键</strong>和一个<strong>值</strong>。</p>
+<h1 id="构造">构造</h1>
 <p>这里我们用链表来构造查找二叉树。私有方法size( )可以得到节点任意节点的子节点数</p>
-<p>size(x) = size(x.left) + size(x.right) + 1</p>
+<pre><code>size(x) = size(x.left) + size(x.right) + 1
+</code></pre>
 <p><mark>二叉查找树(BST)是一棵二叉树，其中每个结点都有一个可比较的键，且每个结点的键都大于其左子树中任意节点的键而小于右子树中的任意节点的键</mark></p>
-<figure data-type="image" tabindex="6"><img src="https://shame41.github.io/post-images/1615888748736.png" alt="" loading="lazy"></figure>
-<h3 id="查找">查找</h3>
+<h1 id="查找">查找</h1>
 <p>查找一个键，如果键在树中那么一定能找到，成为<em>命中</em>，如果不在，则返回null。由于查找二叉树的完美结构，查找一个键时，比较这个键与根节点的大小，再根据二者的大小，选择接下来要与（左/右）节点比较，就这样<strong>递归地</strong>进行，直到二者相等，或者递归到了叶。</p>
-<h3 id="插入">插入</h3>
+<h1 id="插入">插入</h1>
 <p>插入操作与查找操作相似。我们在插入时，先比较它与根节点的大小，如果比根节点大，那么<strong>就放在根节点的左边，否则放在根节点的右边</strong>（当然，如果和根节点相等，那就直接把根节点的值改成要插入的值）。这里的<em>放在左边或者右边</em>是递归的关键。这种递归进行到最后，要么遇到了一个和插入结点的键值相等的结点</p>
 <p>，要么遇到子叶。如果遇到键值相等的节点，我们就可以把那个节点的值替换成我们要插入的结点的值。<strong>如果遇到了子叶，我们就创建一个新节点，让它的键和值等于我们要插入的结点的</strong>，这时，结点的父结点就是我们刚刚比较过的结点。</p>
-<figure data-type="image" tabindex="7"><img src="https://shame41.github.io/post-images/1615888730218.gif" alt="" loading="lazy"></figure>
-<h3 id="返回最值">返回最值</h3>
+<figure data-type="image" tabindex="1"><img src="https://shame41.github.io/post-images/1619601066905.gif" alt="" loading="lazy"></figure>
+<h1 id="返回最值">返回最值</h1>
 <p>很轻易就能发现，二叉查找树最左下角的结点是最小的结点，最右下角的结点是最大的结点。了解了这个，寻找最值也就转化成立寻找最左的子叶和最右的子叶。</p>
-<h3 id="删除">删除</h3>
+<h1 id="删除">删除</h1>
 <p>BST的删除操作有些许复杂，它有三种情况：</p>
 <ol>
 <li>删除的结点是叶</li>
@@ -1401,12 +501,12 @@ ercha
 <li>如果结点没有右节点，那么删除节点后，让它的左子树填补上它的位置</li>
 <li>如果结点有右节点，那么找到右子树中的<strong>最小结点</strong>，把它剔掉（即执行删除动作），然后放在要删除结点的位置（继承被删除的结点的父子关系）</li>
 </ol>
-<figure data-type="image" tabindex="8"><img src="https://shame41.github.io/post-images/1615888689422.png" alt="" loading="lazy"></figure>
-<h3 id="遍历">遍历</h3>
+<figure data-type="image" tabindex="2"><img src="https://shame41.github.io/post-images/1619601080394.png" alt="" loading="lazy"></figure>
+<h1 id="遍历">遍历</h1>
 <p>二叉树有三种遍历方法，<strong>前序遍历，中序遍历，后序遍历</strong></p>
 <p>三者都是从根节点开始遍历，差别在于遍历</p>
-<figure data-type="image" tabindex="9"><img src="https://shame41.github.io/post-images/1615888666460.gif" alt="" loading="lazy"></figure>
-<h4 id="前序遍历">前序遍历</h4>
+<figure data-type="image" tabindex="3"><img src="https://shame41.github.io/post-images/1619601104012.gif" alt="" loading="lazy"></figure>
+<h2 id="前序遍历">前序遍历</h2>
 <p>前序遍历从当前节点（节点 c）开始访问，然后访问其左孩子，再访问右孩子。开始时，节点 c 为 BST 的根节点。算法如下：</p>
 <ol>
 <li>访问节点 c；</li>
@@ -1414,7 +514,7 @@ ercha
 <li>对节点 c 的右孩子重复第 1 步；</li>
 </ol>
 <p>则上图中树的遍历结果为：90, 50, 20, 5, 25, 75, 66, 80, 150, 95, 92, 111, 175, 166, 200。</p>
-<h4 id="中序遍历">中序遍历</h4>
+<h2 id="中序遍历">中序遍历</h2>
 <p>中序遍历是从当前节点（节点 c）的左孩子开始访问，再访问当前节点，最后是其右节点。开始时，节点 c 为 BST 的根节点。算法如下：</p>
 <ol>
 <li>访问节点 c 的左孩子；</li>
@@ -1422,7 +522,7 @@ ercha
 <li>对节点 c 的右孩子重复第 1 步。</li>
 </ol>
 <p>则上图中树的遍历结果为：5, 20, 25, 50, 66, 75, 80, 90, 92, 95, 111, 150, 166, 175, 200。</p>
-<h4 id="后序遍历">后序遍历</h4>
+<h2 id="后序遍历">后序遍历</h2>
 <p>后序遍历首先从当前节点（节点 c）的左孩子开始访问，然后是右孩子，最后才是当前节点本身。开始时，节点 c 为 BST 的根节点。算法如下：</p>
 <ol>
 <li>访问节点 c 的左孩子；</li>
@@ -1430,7 +530,7 @@ ercha
 <li>对节点 c 重复第 1 步；</li>
 </ol>
 <p>则上图中树的遍历结果为：5, 25, 20, 66, 80, 75, 50, 92, 111, 95, 166, 200, 175, 150, 90。</p>
-<h3 id="代码举例-15">代码举例</h3>
+<h1 id="代码举例">代码举例</h1>
 <pre><code class="language-java">import java.util.Random;
 
 //二叉查找树
@@ -1598,7 +698,7 @@ public class BST&lt;Key extends Comparable&lt;Key&gt;, Value&gt;
 		x.N = size(x.left) + size(x.right) + 1;
 		return x;
 	}
-	public void deleteMin(Key key)
+	public void delete(Key key)
 	{
 		root = delete(root, key);
 	}
@@ -1672,28 +772,33 @@ public class BST&lt;Key extends Comparable&lt;Key&gt;, Value&gt;
 
 }
 </code></pre>
-<h2 id="红黑树">红黑树😅</h2>
-<p>过于复杂😭，之后再补充</p>
-<h2 id="哈希表">哈希表🥪</h2>
-<p>有时，我们会想，如果一个<strong>键值对</strong>的键直接用来当数组的下标，那么我们查找这个值时，不就能很快找到这个值吗。然鹅现实很骨感！如果它的键不是整数怎么办，如果它的键是一个很大的整数怎么办？比如，对于键值对&lt;key: 10000000000,  val: “lisa”&gt;，我们要能快速查询，就要有一个数组至少有10000000000的内存空间，才能满足a[10000000000] = &quot;lisa&quot;这个操作。因此，我们需要将其转换。而转换的方法，也就是<strong>散列表</strong>（也称哈希表）的关键。</p>
-<h3 id="散列函数">散列函数</h3>
-<p>我们的主要问题是，<strong>怎么把不同类型的键用一个函数转换成一系列整数，使它们成为数组的索引</strong>，并且保证这些数不重复，而且便于计算，还能均匀分布在个各区间上（即对于M个键值对，0到M-1直接的每个整数都有相等的机会与之对应）<br>
-<img src="https://shame41.github.io/post-images/1615888623924.jpg" alt="" loading="lazy"></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[哈希表]]></title>
+        <id>https://shame41.github.io/post/ha-xi-biao/</id>
+        <link href="https://shame41.github.io/post/ha-xi-biao/">
+        </link>
+        <updated>2021-04-28T08:56:40.000Z</updated>
+        <content type="html"><![CDATA[<p>有时，我们会想，如果一个<strong>键值对</strong>的键直接用来当数组的下标，那么我们查找这个值时，不就能很快找到这个值吗。然鹅现实很骨感！如果它的键不是整数怎么办，如果它的键是一个很大的整数怎么办？比如，对于键值对&lt;key: 10000000000,  val: “lisa”&gt;，我们要能快速查询，就要有一个数组至少有10000000000的内存空间，才能满足a[10000000000] = &quot;lisa&quot;这个操作。因此，我们需要将其转换。而转换的方法，也就是<strong>散列表</strong>（也称哈希表）的关键。</p>
+<h1 id="散列函数">散列函数🤣</h1>
+<p>我们的主要问题是，<strong>怎么把不同类型的键用一个函数转换成一系列整数，使它们成为数组的索引</strong>，并且保证这些数不重复，而且便于计算，还能均匀分布在个各区间上（即对于M个键值对，0到M-1直接的每个整数都有相等的机会与之对应）</p>
+<figure data-type="image" tabindex="1"><img src="https://shame41.github.io/post-images/1619600253932.jpg" alt="" loading="lazy"></figure>
 <p>而散列函数的构建是一个极其高深的数学问题，我们这里举几个简单的例子</p>
-<h4 id="正整数">正整数</h4>
+<h2 id="正整数">正整数</h2>
 <p>我们有一系列整数，要构建它的散列函数，最常用的方法是<strong>除留余数法</strong>。我们选择一个<mark>大小为素数M的数组</mark>，对于任意正整数k，计算k%M。</p>
 <p>这样，我们得到的一系列整数能将键有效地分布在0到M-1的范围内。</p>
-<h4 id="浮点数">浮点数</h4>
+<h2 id="浮点数">浮点数</h2>
 <p>如果键是0到1之间的实数，我们可以将它<strong>乘以M并四舍五入得到一个0到M-1的索引值</strong>。</p>
-<p>但是这种方法有缺陷。因为这种情况下键的高位起的作用更大，最低位对散列的结果没有影响。一种优化的方法是<strong>将键表示成二进制然后再使用除留余数法</strong>（Java就是这么做的）</p>
-<h4 id="字符串">字符串</h4>
+<p>但是这种方法有缺陷。因为这种情况下键的高位起的作用更大，最低位对散列的结果没有影响。一种优化的方法是<strong>将键表示成二进制然后再使用除留余数法</strong>（Java就是这么做的🥱）</p>
+<h2 id="字符串">字符串</h2>
 <p>我们可以简单地把字符串当作大整数，这样我们就可以使用<strong>除留余数法</strong>。</p>
 <pre><code class="language-java">int hash = 0;
 for(int i = 0; i &lt; s.length; i++)
 	hash = (R * hash + s.charAt(i)) % M;
 //charAt()能返回一个char值，即一个非负16位整数
 </code></pre>
-<h4 id="哈希码">哈希码</h4>
+<h2 id="哈希码">哈希码</h2>
 <p>JAVA为每种数据类型都继承了一个能返回32比特整数的hashCode()方法。我们可以将hashCode()的返回值转化为一个数组索引。具体方法如下</p>
 <pre><code class="language-java">private int hash(Key x)
 {
@@ -1701,14 +806,16 @@ for(int i = 0; i &lt; s.length; i++)
 }
 </code></pre>
 <p>这段代码会将符号位屏蔽，然后用除留余数法计算它除以M的余数。在使用这种代码时，我们一般会将数组的大小M取为<strong>素数</strong>以充分利用原散列值的所有位</p>
-<h3 id="拉链法处理碰撞">拉链法处理碰撞</h3>
+<h1 id="拉链法处理碰撞">拉链法处理碰撞👺</h1>
+<h2 id="原理">原理</h2>
 <p>前面我们解决了第一个问题：如和将键转换为数组索引，接下来我们要处理第二个问题：<strong>散列值碰撞</strong>，即两个或多个值的散列值相同。 一种直接的方法就是将得到的<mark>大小为M的数组的每个元素都指向一条链表</mark>，链表中的每个结点都储存了散列值为该元素的索引的键值对。这种方法称作<strong>拉链法</strong>。</p>
 <p>基本思想是：选择足够大的M，使得<strong>所有链表都能尽可能短</strong>以保证高效地查找。</p>
-<p>查找分为两步：1.根据散列值找到对应的链表，2.然后沿着链表顺序查找相应的键。<br>
-<img src="https://shame41.github.io/post-images/1615957522860.png" alt="" loading="lazy"><br>
-因为我们用M条链表来保持N个键，无论键在各个链表中分布如何，链表的平均长度肯定都是N/M。<br>
-####代码举例</p>
-<pre><code class="language-java">public class SeparateChainingHashST&lt;Key, Value&gt;
+<p>查找分为两步：1.根据散列值找到对应的链表，2.然后沿着链表顺序查找相应的键。</p>
+<figure data-type="image" tabindex="2"><img src="https://shame41.github.io/post-images/1619600670798.jpg" alt="" loading="lazy"></figure>
+<p>因为我们用M条链表来保持N个键，无论键在各个链表中分布如何，链表的平均长度肯定都是N/M。</p>
+<h2 id="代码举例">代码举例</h2>
+<pre><code class="language-java">//用链表实现基于拉链法的哈希表
+public class SeparateChainingHashST&lt;Key, Value&gt;
 {
 	private int N;			//键值对总数
 	private int M;			//散列表的大小
@@ -1750,10 +857,1258 @@ for(int i = 0; i &lt; s.length; i++)
 	}
 
 }
+
 </code></pre>
-<p>###基于线性探测法的散列表<br>
-散列表的另一种实现方式就是<mark>用大小为M的数组保存N个键值对，其中M&gt;N</mark>。<strong>我们需要依靠数组中的空位解决碰撞冲突</strong>。基于这种策略的所有方法被统称为<em>开放地址</em>散列表。它最简单的一种实现方式叫做<strong>线性探测法</strong>。<br>
-####原理</p>
+<h1 id="基于线性探测法的散列表">基于线性探测法的散列表🤣</h1>
+<p>散列表的另一种实现方式就是<mark>用大小为M的数组保存N个键值对，其中M&gt;N</mark>。<strong>我们需要依靠数组中的空位解决碰撞冲突</strong>。基于这种策略的所有方法被统称为<strong>开放地址</strong>散列表。它最简单的一种实现方式叫做<strong>线性探测法</strong>。</p>
+<h2 id="原理-2">原理</h2>
+<p>我们在插入键值对时，如果一个键的散列值已经被另一个不同的键占用，我们<strong>便直接看散列表中下一个位置（即索引+1）</strong>。这样会出现两个个结果。</p>
+<ol>
+<li>这个地方的散列值还是和我们要插入的键的散列值相同，我们就再看下一个位置</li>
+<li>这个地方是空的，我们就把键值对放在这里</li>
+</ol>
+<p>我们在查找键值对时，便可以根据散列值来查找，这时又会出现三种结果</p>
+<ol>
+<li>散列值相同且该位置的键与要查找的键相同，则<strong>命中</strong></li>
+<li>散列值相同但该位置的键与要查找的键不同，则<strong>继续查找</strong>，即将索引加一，再判断键是否相等，直到找到该键或遇到空元素</li>
+<li>遇到空元素，该位置没有键，则<strong>未命中</strong></li>
+</ol>
+<figure data-type="image" tabindex="3"><img src="https://shame41.github.io/post-images/1619600712443.png" alt="" loading="lazy"></figure>
+<p>删除操作，在基于线性探测的散列表中，是有点难实现的。因为，你仔细想想，如果仅仅是把要删除的键值对设置为Null，那么其他键值对的探测都会受到影响。因此不能这么简单的操作。正确做法是：<strong>我们需要将簇中被删除的右侧的所有键重新插入散列表</strong>，这比想象中的要复杂！具体操作是：先判断被删除元素右边是否还有元素，如果没有则不用重新插入，如果有，则先保存那个元素，然后将其删除，再然后重新插入到散列表。</p>
+<p>（<strong>簇</strong>是指在元素插入数组后聚集成的一组连续的元素条）</p>
+<h2 id="代码举例-2">代码举例</h2>
+<p>这里的代码我们选择使用动态数组来实现。这段符号表的实现将键和值分别保存在两个数组中</p>
+<pre><code class="language-java">
+public class LinearProbingHashST&lt;Key, Value&gt;
+{
+	private int N;			//符号表中键值对总数
+	private int M = 16;		//线性探测表的大小
+	private Key[] keys;		//键
+	private Value[] vals;	//值
+	
+	public LinearProbingHashST()
+	{
+		keys = (Key[]) new Object[M];
+		vals = (Value[]) new Object[M];
+	}
+	public LinearProbingHashST(int cap)
+	{
+		// TODO Auto-generated constructor stub
+		keys = (Key[]) new Object[cap];
+		vals = (Value[]) new Object[cap];
+	}
+	private int hash(Key key)
+	{
+		return (key.hashCode() &amp; 0x7fffffff) % M;
+	}
+	private void resize(int cap)
+	{
+		LinearProbingHashST&lt;Key, Value&gt; t;
+		t = new LinearProbingHashST&lt;Key, Value&gt; (cap);
+		for(int i=0; i&lt;M; i++)
+		{
+			if((keys[i] != null))
+				t.put(keys[i], vals[i]);
+		}
+		keys = t.keys;
+		vals = t.vals;
+		M = t.M;
+	}
+	public void put(Key key, Value val)//往散列表中插入键值对
+	{
+		if(N &gt;= M/2)
+			resize(2*M);
+		int i ;
+		for(i = hash(key); keys[i] != null; i = (i + 1) % M)
+			if(keys[i].equals(key))
+			{
+				vals[i] = val;
+				return;
+			}
+		keys[i] = key;
+		vals[i] = val;
+		N++;
+	}
+	public void delete(Key key)//删除散列表中的键值对
+	{
+		if(!contain(key)) return;//如果要删除的元素不在散列表中则直接返回
+		int i = hash(key);
+		while(!key.equals(keys[i]))//依次寻找有无与key相同的键值元素
+			i = (i + 1) % M;
+		keys[i] = null;//删除键值对
+		vals[i] = null;//删除键值对
+		i = (i + 1) % M;//去到被删除元素的下一个键值对
+		while(keys[i] != null)//如果这个键值对不为空，则说明被删除元素后续有人
+		{
+			Key keyToReDo = keys[i];//用这个来储存将要重新插入的键值对
+			Value valToReDo = vals[i];
+			keys[i] = null;//先删除
+			vals[i] = null;
+			N--;
+			put(keyToReDo, valToReDo);//再重新插入到散列表
+			//相信我们的put()，能将这个键值对插入他应该待的位置
+			i = (i + 1) % M;//寻找下一个要重新插入的元素
+		}
+		N--;
+		if(N &gt; 0 &amp;&amp; N == M/8)
+			resize(M/2);
+	}
+	
+	private boolean contain(Key key)
+	{
+		if(get(key)==null)
+			return false;
+		else 
+			return true;
+	}
+	
+	public Value get(Key key)
+	{
+		for(int i=hash(key); keys[i] != null; i = (i + 1) % M)
+			if(keys[i].equals(key))
+				return vals[i];
+		return null;
+	}
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+
+	}
+
+}
+
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[字符串排序]]></title>
+        <id>https://shame41.github.io/post/zi-fu-chuan-pai-xu/</id>
+        <link href="https://shame41.github.io/post/zi-fu-chuan-pai-xu/">
+        </link>
+        <updated>2021-04-28T08:52:41.000Z</updated>
+        <content type="html"><![CDATA[<p>我们将学习两类<strong>完全不同</strong>的字符串排序方法。</p>
+<ol>
+<li>第一类方法<strong>从右到左检查</strong>字符串中的字符。这种方法被称为<strong>低位优先（LSD)<strong>的字符串排序。这种方法最适合用于</strong>字符串长度都相等</strong>一群字符串。</li>
+<li>第二类方法<strong>从左到右检查</strong>字符串中的字符。这种方法被称为**高位优先（MSD）**的字符串排序。<strong>它不一定需要检查所有输入就能完成排序</strong>。它的思想与快速排序类似。</li>
+</ol>
+<h1 id="键索引计数法">键索引计数法🎉</h1>
+<p>作为热身，我们先学习一种适合于频繁出现<strong>重复小整数</strong>的排序方法。它是我们接下来学习字符串排序的基础。而它本身也是非常的实用。</p>
+<figure data-type="image" tabindex="1"><img src="https://shame41.github.io/post-images/1619600022891.png" alt="" loading="lazy"></figure>
+<p>键索引计数法分四步</p>
+<ol>
+<li><strong>频率统计</strong>，即用一个int数组count[]计算每个键出现的频率。这个数组的索引是各个键（即上图的 组号），值是索引所代表的键出现的次数。如count[2]=3，意思是1出现了3次（为什么是1但索引是2之后会解释）。具体操作是：遍历整个小整数数组，如果键为r，则将count[r+1]++，即如果出现了1，就将count[2]++。</li>
+<li><strong>将频率转换为索引</strong>，即用count[]来计算每个键在排序结果中的<strong>起始索引位置</strong>。什么叫 起始索引位置 ？其实，我们这里已经对小整数数组进行分划了。即 对于1，我们把它放在数组的第一块区域内，2放在第二个区域内...以此类推。而它们各个区域的第一个位置，就是<strong>起始索引位置</strong>。而很显然，任意给定的小整数的起始索引均为<strong>比这个小整数更小的其他小整数的出现频率之和</strong>。对于上图，1的起始索引很显然是0，2的起始索引是count[1+1]即3，3的起始索引是count[1+1] + count[2 + 1]即8...<mark>我们用count[r+1]来保存r的起始索引。</mark></li>
+<li><strong>数据分类</strong>。我们创建一个辅助数组aux[]，将小整数数组所有元素移动到这个辅助数组中。其中每个元素在aux[]中的位置是由它的<strong>本身的值</strong>和<strong>count[]的值</strong>来决定。对于上图的Anderson，它的值是2，count[2]是3，因此Anderson放在aux[3]即aux[count[2]]。然后，<strong>将count[r]++</strong>，再遇到如Martinez，值为2，则此时count[2]是4，因此Martinez放在aux[count[2]]上。将所有小整数全都移到aux后，其实已经将数组排好了。</li>
+<li><strong>回写</strong>，即将aux数组复制回原数组中。</li>
+</ol>
+<pre><code>int N = a.length;
+
+String[] aux = new String[N];
+int[] count = new int[R+1];
+
+//a[]数组是字符串数组，a[r].key()是这个字符串所对应的值(小整数)
+
+//频率统计
+for(int i = 0; i &lt; N; i++)
+	count[a[i].key() + 1]++;
+//将频率转换为索引
+for(int r = 0; r &lt; R; r++)
+	count[r+1] += count[r];
+//数据分类
+for(int i = 0; i &lt; N; i++)
+	aux[count[a[i].key()]++] = a[i];
+//回写
+for(int i = 0; i &lt; N; i++)
+	a[i] = aux[i];
+</code></pre>
+<p>索引计数法对于<strong>小整数键</strong>的排序非常有效，它已经突破了NlogN算法的下限✨</p>
+<h1 id="低位优先的字符串排序">低位优先的字符串排序🥂</h1>
+<p>对于如车牌号、学生号等长度都相同的字符串，我们可以通过低位优先排序来完成对于它们的排序。具体操作便是：如果<strong>字符串长度都为W</strong>，那就<strong>从右向左</strong>以每个位置的字符作为键，用<strong>键索引计数法</strong>将字符串<strong>排序W遍。</strong></p>
+<p>这个简单得夸张的算法让人很难相信它可以将许多字符串按顺序排好。但它确实可以完成这个工作🤑</p>
+<pre><code class="language-java">public class LSD
+{
+   public static void sort(String[] a, int W)
+   {
+       //通过前w个字符串将a[]排序
+       int N = a.length;
+       int R = 256;//R是基数，十进制整数中R是10，16进制整数中R是16，ascii码中R是256
+       String[] aux = new String[N];
+
+       for(int d = W - 1; d &gt;= 0; d--)
+       {
+           //根据第d个字符用 键索引计数法 排序
+           int[] count = new int[R+1];//计算出现频率
+           for (int i = 0; i &lt; N; i++)
+               count[a[i].charAt(d) + 1]++;
+           for (int r = 0; r &lt; R; r++)//将频率转换为索引
+               count[r+1] += count[r];
+           for (int i = 0; i &lt; N; i++)//将元素分类
+               aux[count[a[i].charAt(d)]++] = a[i];
+           for (int i = 0; i &lt; N; i++)//回写
+               a[i] = aux[i];
+
+       }
+   }
+}
+
+</code></pre>
+<p>可以发现，无论N多大，它只会遍历W次数据，它就是我们所说的<strong>线性时间排序</strong>。它所需要的空间与N+R成正比。</p>
+<h1 id="高位优先的字符串排序">高位优先的字符串排序🦪</h1>
+<p>这里我们可以实现一个用来处理字符串长度不一定相同的字符串排序，高位优先排序，即从左到右遍历所有字符。它的思路是：首先用<strong>键索引计数法</strong>对所有的字符串<strong>按照首字母排序</strong>，然后（递归地）将每个首字母所对应的子数组排序。因为我们要处理的字符串长度不一定相同，比如在排序时，我们检查到了第四个字符，然而有些字符串甚至没有第四个字符，对此，我们将那些<strong>比较短的字符串放在长的字符串的前面</strong>，即she放在shell前面，但很显然she要放在bean的后面。</p>
+<p>具体操作如下：</p>
+<ol>
+<li>对首字母用键索引计数法排序，这是我们就得到了一个分划，分划的依据是首字母</li>
+<li>对每个分划，我们再对它的第一个字符（不包括首字符）进行键索引计数法排序，这样每个分划又生成了新的分划</li>
+<li>当字符串的长度小于一个阈值时，可以直接对字符串进行插入排序</li>
+</ol>
+<p>对于上面的操作，我想，你一定会有几个问题想要问</p>
+<p><mark>第一个问题</mark>：如何实现<em>比较短的字符串放在比较长的字符串的前面</em>  ？</p>
+<p>这里我们是将count数组数量扩大一个位置，来装下表示字符串结尾的元素。</p>
+<p>在代码中，你可以看到，我们做了int[] count = new int[R+2]。但你会注意到，在原本的建索引排序中，对于基数为R的字母表，我们是new int[R+1]。因此，多出来的这个就是用来表示<em>字符串结尾</em>的。</p>
+<p>它的具体思路如下</p>
+<p>先定义一个charAt(String s, int d)操作，他代表从s中取出第d个字符，当d比s还要大时(即取到了字符串的末尾)，返回-1。这个函数的返回值是第d个字符的ascii码，而如果返回了-1，那么这个“-1”会比所有ascii码都要小，因此会排在所有ascii码的前面</p>
+<p>因此，在<em>将频率转换为索引</em> 这一步，表示结尾的那个元素的索引是<strong>0</strong>，表示字符”c&quot;的索引是100。因此比较短的字符串永远会排在仍然还有字符的字符串的前面（在同一组中）。</p>
+<p><mark>第二个问题</mark>：为什么会设置阈值，并且超过阈值后对字符串进行选择排序？</p>
+<p>在我们将字符串数组切分成无数个微型数组后，我们需要快速解决它们。在之前，你应该就了解过，对于数据量较小的数组，插入排序比大部分算法要优秀。这在高位优先的字符串排序中尤为如此！因此在处理小数组时，将算法切换为插入排序在这里是<strong>必须的</strong>。</p>
+<p>它的具体思路如下</p>
+<p>为了避免对前面已经排序的字符进行操作，我们要给插入排序加入一个参数int d，表示字符串的前d个字符不用处理，即插入排序假设，字符串数组中的所有字符串的前d个字符都是相同的。这样，就可以只检查d后边的字符。</p>
+<p>经过统计，当字符串未被检查的字符数量是15左右，这是切换成插入排序，效率最好！</p>
+<pre><code class="language-java">public static void sort(String[] a, int lo, int hi, int d)
+{
+	//从第d个字符开始，对a[lo]到a[hi]排序
+	for(int i = lo; i &lt;= hi; i++)
+		for(int j = i; j &gt; lo &amp;&amp; less(a[j], a[j-1], d); j--)
+			exch(a, j, j-1);
+}
+
+private static boolean less(String v, String w, int d)
+{
+	return v.substring(d).compareTo(w.substring(d)) &lt; 0;
+}
+</code></pre>
+<pre><code class="language-java">public class MSD
+{
+    private static int R = 256;     //基数
+    private static final int M = 15;//小数组切换的阈值
+    private static String[] aux;    //分类所需的辅助数组
+    private static int charAt(String s, int d)
+    {
+        if (d &lt; s.length())
+            return s.charAt(d);
+        else
+            return -1;
+    }
+
+    public static void sort(String[] a)
+    {
+        int N = a.length;
+        aux = new String[N];
+        sort(a, 0, N-1, 0);
+    }
+    private static void sort(String[] a, int lo, int hi, int d)
+    {
+        //以第d个字符为键将a[lo]至a[hi]排序
+        if (hi &lt;= lo + M)
+        {
+            Insertion.sort(a, lo, hi, d);
+            return;
+        }
+        int[] count = new int[R+2];//计算频率
+        for (int i = lo; i &lt;= hi; i++)
+            count[charAt(a[i], d) + 2]++;
+        for (int r = 0; r &lt; R+1; r++)//将频率转换为索引
+            count[r+1] += count[r];
+        for (int i = lo; i &lt;= hi; i++)//数据分类
+            aux[count[charAt(a[i], d) + 1]++] = a[i];
+        for (int i = lo; i &lt;= hi; i++)//回写
+            a[i] = aux[i - lo];
+
+        //递归的以每个字符为键进行排序
+        for (int r = 0; r &lt; R; r++)
+            sort(a, lo + count[r], lo + count[r+1] - 1, d+1);
+    }
+}
+</code></pre>
+<h1 id="三向字符串快速排序">三向字符串快速排序🍖</h1>
+<p>我们可以改进一下高位优先的字符串排序，让它根据首字母进行三向切分，一份是含有首字母小于切分字符的字符串子数组，一份是含有首字母等于切分字符的字符串子数组，一份是含有首字母大于切分字符的字符串的子数组；然后递归地将得到的三个子数组再次按照这个规律进行切分。与我们之前学的三向快速排序非常相似。</p>
+<pre><code>public class Quick3string
+{
+    private static int charAt(String s, int d)
+    {
+        if (d &lt; s.length())
+            return s.charAt(d);
+        else
+            return -1;
+    }
+    public static void sort(String[] a)
+    {
+        sort(a, 0, a.length - 1, 0);
+    }
+    private static void sort(String[] a, int lo, int hi, int d)
+    {
+        if (hi &lt;= lo)
+            return;
+        int lt = lo, gt = hi;
+        int v = charAt(a[lo],d);
+        int i = lo + 1;
+        while (i &lt;= gt)
+        {
+            int t = charAt(a[i], d);
+            if (t &lt; v)
+                exch(a, lt++, i++);
+            else if (t &lt; v)
+                exch(a, i, gt--);
+            else
+                i++;
+        }
+        //a[lo..lt-1] &lt; v = a[lt..gt] &lt; a[gt+1..hi]
+        sort(a, lo, lt-1, d);
+        if (v &gt;= 0)
+            sort(a, lt, gt, d+1);
+        sort(a, gt+1, hi, d);
+    }
+
+    private static void exch(String[] a, int i, int j)
+    {
+        String t = a[i];
+        a[i] = a[j];
+        a[j] = t;
+    }
+}
+
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[优先队列]]></title>
+        <id>https://shame41.github.io/post/you-xian-dui-lie/</id>
+        <link href="https://shame41.github.io/post/you-xian-dui-lie/">
+        </link>
+        <updated>2021-04-28T08:47:46.000Z</updated>
+        <content type="html"><![CDATA[<p>很多情况下，我们需要这么一种工具，它能非常快速地提供给我们一个数组中最大的元素(最小同理)。很显然，一种简单粗暴的解决方式就是在取出元素时排序整个数组，但是这样太慢了，因为我们只是要最大的，此时数组不一定要有序，因此我们引入一种工具：<strong>优先队列</strong></p>
+<h1 id="二叉堆优先队列">二叉堆优先队列🥖</h1>
+<p>这里我们只介绍二叉堆组成的优先队列，在最坏情况下，它能保证将元素插入或取出优先队列都只需要<strong>logN</strong>的复杂度，实现整体最优。👍</p>
+<h2 id="原理">原理</h2>
+<p><strong>二叉堆</strong>的定义</p>
+<ol>
+<li>
+<p>当一棵二叉树的每个节点都大于等于(小于等于同理)它的两个子节点时，它被称为<strong>堆有序</strong></p>
+</li>
+<li>
+<p>根节点是堆有序的二叉树的最值节点</p>
+</li>
+<li>
+<p><strong>二叉堆</strong>是一组能够用<strong>堆有序</strong>的<strong>完全二叉树</strong>（你不会不知道什么是完全二叉树吧）排序的元素，并在数组中按层级储存</p>
+</li>
+<li>
+<p>为了方便，<strong>我们不使用第一个节点</strong>，这样，位置为k的<strong>父节点的位置为k/2</strong>，两个<strong>子节点分别是2k或2k+1</strong></p>
+</li>
+</ol>
+<p>堆有两个基本操作，<strong>插入元素</strong>，<strong>删除最值元素</strong></p>
+<p><strong>插入元素</strong>：我们将新元素加到数组末尾，然后增加堆的大小N，并让这个元素<strong>上浮</strong>到合适位置</p>
+<p><strong>删除最值元素</strong>：将数组顶端元素删去最大的元素并返回，然后<strong>把数组最后一个元素放到顶端</strong>，让这个元素<strong>下沉</strong>到合适位置</p>
+<p>我们所说的<strong>上浮</strong>与<strong>下沉</strong>指的是<strong>堆的有序化</strong>，即将元素放到它应在在的位置</p>
+<p><strong>上浮</strong>：如果堆的有序状态因为某个节点<strong>变得比它的父节点更大</strong>而被打破，那么我们就需要<strong>交换它和它的父节点</strong>来修复堆。很显然，交换后，这个节点比它的两个子节点更大，<strong>但这个节点仍然可能比它现在的父节点大</strong>，因此我们要重复上面的操作，直到有序。</p>
+<p><strong>下沉</strong>：如果堆的有序状态因为某个节点<strong>变得比它的两个子节点或者其中之一更小</strong>而被打破了，那么我们需要<strong>交换它和它的两个子节点中最大的那个</strong>来修复堆，不断重复上述操作，直到它的子节点都比它小或者到达了堆的底部。</p>
+<h2 id="代码举例">代码举例</h2>
+<p>值得一提的是，堆可以分为<strong>大顶堆</strong>和<strong>小顶堆</strong>，这里我们实现前者</p>
+<pre><code class="language-java">import java.util.Random;
+public class MaxPQ&lt;Key extends Comparable&lt;Key&gt;&gt;
+{
+	//基于堆的优先队列
+	private Key[] pq;	//基于堆的完全二叉树
+	private int N = 0;	//储存于pq[1..N]中，pq[0]没有使用
+	
+	public MaxPQ(int maxN)
+	{
+		pq = (Key[]) new Comparable[maxN+1];
+	}
+	public boolean isEmpty()
+	{
+		return N == 0;
+	}
+
+	public void insert(Key v)
+	{
+		pq[++N] = v;
+		swim(N);
+	}
+	public Key delMax()
+	{
+		Key max = pq[1];
+		exch(1, N--);
+		pq[N+1] = null;
+		sink(1);
+		return max;
+	}
+	
+	private boolean less(int i, int j)
+	{
+		return pq[i].compareTo(pq[j]) &lt; 0;
+	}
+	private void exch(int i, int j)
+	{
+		Key t = pq[i];
+		pq[i] = pq[j];
+		pq[j] = t;
+	}
+	private void swim(int k)//上浮
+	{
+		while(k&gt;1 &amp;&amp; less(k/2, k))
+		{
+			exch(k/2, k);
+			k = k/2;
+		}
+	}
+	private void sink(int k)
+	{
+		while(2*k &lt;= N)
+		{
+			int j = 2*k;
+			if(j&lt;N &amp;&amp; less(j, j+1))
+				j++;//确定两个子节点哪个更大
+			if(!less(k, j))
+				break;//再比较最大的子节点与父节点的关系
+			exch(k, j);
+			k = j;
+		}
+	}
+	
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+		MaxPQ&lt;Integer&gt; a = new MaxPQ(1000000);
+		Random r = new Random(13);
+		for (int i = 0; i&lt;1000000; i++)
+		{
+			a.insert(r.nextInt()%1000000);
+		}
+		System.out.println(a.delMax());
+	}
+
+}
+
+</code></pre>
+<h1 id="堆排序">堆排序🧀</h1>
+<p>如果将所有元素插入一个小顶堆，然后重复调用<strong>删除最小元素</strong>的操作来将它们按顺序删去。这就是堆排序。</p>
+<h2 id="原理-2">原理</h2>
+<p>堆排序有两个阶段 <strong>堆的构造</strong>，<strong>下沉排序</strong>。</p>
+<p><strong>堆的构造</strong>：我们将原始数组重新组织安排进一个堆中。一个无脑的方法，即从左到右遍历数组，对每个元素都进行上浮操作，这样能在NlogN内实现。可是这样<strong>太笨了</strong>😫  一种更聪明更高效的方法是 ：<strong>从N/2开始向左对数组中的元素进行下沉</strong>，为什么要这么做呢？因为由于<strong>完全二叉树</strong>的数学性质，可以发现，N/2之后的所有元素都是<strong>叶</strong>，显然，叶是不需要下沉的，所以我们只用下沉N/2之前的元素。</p>
+<p><strong>下沉排序</strong>：我们从堆中按<strong>递减顺序</strong>取出所有元素并得到排序结果。具体来说，我们将数组第一个元素(数组[0]是不用的，所以第一个元素是数组[1])<strong>与最后一个元素交换，然后下沉交换后的第一个元素</strong>。(与选择排序相似,但所需的比较少得多)</p>
+<h2 id="代码举例-2">代码举例</h2>
+<pre><code class="language-java">public class PQsort
+{
+	public static void sort(Comparable[] a)
+	{
+		//堆排序
+		int N = a.length;
+		Comparable[] pb = new Comparable[N+1]; 
+		for(int i=0; i&lt;N; i++)
+			pb[i+1] = a[i];
+		for(int k = N/2; k &gt;= 1; k--)
+			sink(pb, k, N);//用于构造大顶堆
+		while(N &gt; 1)
+		{
+			exch(pb, 1, N--);
+			sink(pb, 1, N);
+		}
+		for(int i=0; i&lt;a.length; i++)
+			a[i] = pb[i+1];
+	}
+	private static void sink(Comparable[] a, int k, int N)
+	{
+		while(2*k &lt;= N)
+		{
+			int j = 2*k;
+			if(j&lt;N &amp;&amp; less(a, j, j+1))
+				j++;
+			if(!less(a, k, j))
+				break;
+			exch(a, k, j);
+			k = j;
+		}
+	}
+	private static boolean less(Comparable[] pq, int i, int j)
+	{
+		return pq[i].compareTo(pq[j]) &lt; 0;
+	}
+	private static void exch(Comparable[] pq, int i, int j)
+	{
+		Comparable t = pq[i];
+		pq[i] = pq[j];
+		pq[j] = t;
+	}
+	private static void show(Comparable[] a)
+	{
+		//在单行中打印数组
+		for(int i = 0; i&lt;a.length; i++)
+			System.out.print(a[i]+&quot; &quot;);
+	}
+	public static void main(String[] args)
+	{
+		Integer[] a = {19,15,18,20,5,24,1,13,16,12,5};
+		sort(a);
+		show(a);
+	}
+
+}
+</code></pre>
+<h1 id="索引优先队列">索引优先队列🥗</h1>
+<p>我们的优先队列能做到的事情很少，只能向其中加入元素和获取并删除最值元素。然鹅在很多应用中，允许使用<mark>已经进入优先队列中的元素</mark>是很有必要的（如Dijkstra算法）。要做到这一点的一种简单方法就是给每个元素一个<strong>索引</strong>。</p>
+<h2 id="原理-3">原理</h2>
+<p>索引优先队列用一个<strong>整数</strong>和队列中的<strong>元素</strong>进行关联，这样，当我们要访问队列中的元素时，只需要用它所关联的整数进行索引查找就可以了。</p>
+<p>为此，我们创立三个数组  pq，qp，elements</p>
+<p>其中，pq[qp[i]] = qp[pq[i]] = i，这样，当我们想访问元素“b”时，我们就可以通过elements[10]来访问它（其中10是与&quot;b &quot;相关的整数），而当我们想要知道元素&quot;b&quot;在<strong>二叉堆</strong>中处于哪个位置时，我们可以通过qp[10]。到现在我们只用了两个数组(elements和qp)，那pq数组呢？</p>
+<p>首先，作为优先队列的一种，它一定能通过<strong>上浮</strong>和<strong>下沉</strong>来使堆<strong>有序化</strong>。在普通优先队列中，我们直接对队列的元素进行操作，而在索引优先队中，<strong>储存元素的数组已经不再具有二叉堆的性质</strong>，取而代之的使pq数组，因此在索引优先队列中，<strong>储存元素的数组用来快速索引查找，pq数组作为储存元素的数组的映射，具有堆的性质，因此我们的上浮下沉都是对pq数组操作而不是对储存元素的数组</strong>。</p>
+<p>当然，为了保持pq[qp[i]] = qp[pq[i]] = i的性质，我们在改变pq后也要相应改变qp</p>
+<p><img src="https://shame41.github.io/post-images/1619599813207.jpg" alt="" loading="lazy"><br>
+<img src="https://shame41.github.io/post-images/1619599791979.jpg" alt="" loading="lazy"></p>
+<h2 id="代码举例-3">代码举例</h2>
+<pre><code class="language-java">![u=2489824036,314288118&amp;fm=26&amp;gp=0](C:\Users\Administrator\Desktop\新建文件夹\u=2489824036,314288118&amp;fm=26&amp;gp=0.png)public class IndexMinPQ&lt;Key extends Comparable&lt;Key&gt;&gt;
+{
+	private int N;				//amount of the elements in PQ
+	private int[] pq;			//index binary heap, begin at '1'
+	private int[] qp;			//inverted pq : qp[pq[i]] = pq[qp[i]] = i
+	private Key[] keys;			//elements with priority
+	public IndexMinPQ(int maxN)
+	{
+		keys = (Key[]) new Comparable[maxN + 1];
+		pq = new int[maxN + 1];
+		qp = new int[maxN + 1];
+		for(int i = 0; i &lt;= maxN; i++)
+			qp[i] = -1;
+	}
+	private void exch(int i, int j)
+	{
+		int t = pq[i];
+		pq[i] = pq[j];
+		pq[j] = t;
+		t = qp[pq[i]];
+		qp[pq[i]] = qp[pq[j]];
+		qp[pq[j]] = t;
+	}
+	private void swim(int k)//上浮
+	{
+		while(k&gt;1 &amp;&amp; less(k/2, k))
+		{
+			exch(k/2, k);
+			k = k/2;
+		}
+	}
+	private void sink(int k)
+	{
+		while(2*k &lt;= N)
+		{
+			int j = 2*k;
+			if(j&lt;N &amp;&amp; less(j, j+1))
+				j++;
+			if(!less(k, j))
+				break;
+			exch(k, j);
+			k = j;
+		}
+	}
+	private boolean less(int i, int j)
+	{
+		return keys[pq[i]].compareTo(keys[pq[j]]) &gt; 0;
+	}
+	public boolean isEmpty()
+	{
+		return N == 0;
+	}
+	public boolean contains(int k)
+	{
+		return qp[k] != -1;
+	}
+	public void insert(int k, Key key)
+	{
+		N++;
+		qp[k] = N;
+		pq[N] = k;
+		keys[k] = key;
+		swim(N);
+	}
+	public Key min()
+	{
+		return keys[pq[1]];
+	}
+	public int delMin()
+	{
+		int indexOfMin = pq[1];
+		exch(1, N--);
+		sink(1);
+		keys[pq[N+1]] = null;
+		qp[pq[N+1]] = -1;
+		return indexOfMin;
+	}
+
+	public int minIndex()
+	{
+		return pq[1];
+	}
+	public void change(int k, Key key)
+	{
+		keys[k] = key;
+		swim(qp[k]);
+		sink(qp[k]);
+	}
+	public void delete(int k)
+	{
+		int index = qp[k];
+		exch(index, N--);
+		swim(index);
+		sink(index);
+		keys[k] = null;
+		qp[k] = -1;
+	}
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stu
+		IndexMinPQ&lt;Integer&gt; a = new IndexMinPQ&lt;Integer&gt;(10);
+		a.insert(1,11);
+		a.insert(3,6);
+		a.insert(4,14);
+		a.insert(6,3);
+		a.insert(8,8);
+		a.insert(10,2);
+		a.delete(4);
+		System.out.println(a.minIndex());
+ercha
+	}
+
+}
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[快速排序]]></title>
+        <id>https://shame41.github.io/post/kuai-su-pai-xu/</id>
+        <link href="https://shame41.github.io/post/kuai-su-pai-xu/">
+        </link>
+        <updated>2021-04-28T08:45:46.000Z</updated>
+        <content type="html"><![CDATA[<p>快速排序可能是应用最广泛的排序算法了。快速排序流行的原因是它实现简单，适用于各种不同输入数据且在一般应用中<mark>比其他排序算法都要快得多</mark>。</p>
+<p>快排一个引人注目的特点包括 <mark>它是原地排序</mark>（只需要一个很小的辅助栈），且将长度为N的的数组排序所需的时间和NlgN成正比。<mark>我们之前学过的任何算法都无法将这两个优点结合起来</mark>。它的缺点也很明显  <mark>极度的脆弱</mark>。实现时要非常小心才能避免低劣的性能。</p>
+<h1 id="基本快速排序">基本快速排序🥐</h1>
+<p>快速排序是一种<strong>分治的</strong>排序算法，它将一个数组分为两个子数组，将两部分独立地排序。</p>
+<p>快排与归并是互补的：</p>
+<ol>
+<li>
+<p>归并排序将数组分成两个子数组分别排序，并将有序的子数组归并以将整个数组排序</p>
+</li>
+<li>
+<p>快速排序是当两个子数组都有序时自然整个数组都有有序了</p>
+</li>
+</ol>
+<p>在了解快速排序的具体实现之前，有一个重要的概念 <strong>切分</strong>，切分会将a[j]元素放在数组中合适的位置，这个位置满足a[j]左边的元素都比a[j]小，a[j]右边的元素都比a[j]大，当我们递归地调用切分，可以很显然得到，整个数组都会被排好。</p>
+<p>那么切分该如何实现呢😐</p>
+<h2 id="原理">原理</h2>
+<p>通常我们选择第一个元素作切分元素，然后将小于这个切分元素的放数组左边，大于这个切分元素的放右边，然后<strong>递归地</strong>再将左边的数组和右边的数组分别进行切分。那么，怎样把这些元素放到切分元素的两边呢？</p>
+<ol>
+<li>
+<p>先选定<em>切分元素</em>，这里我们选择<mark>数组的第一个元素</mark></p>
+</li>
+<li>
+<p>一个索引指向切分元素右边第一个元素（也就是数组的第二个元素），一个指向数组最右边</p>
+</li>
+<li>
+<p>左索引向右一直扫描，找到比切分元素大的元素时停止</p>
+</li>
+<li>
+<p>右索引向左一直扫描，找到比切分元素大的元素时停止</p>
+</li>
+<li>
+<p>交换左右索引上的元素</p>
+</li>
+<li>
+<p>然后各索引继续，以当前位置为起点，继续上述操作，直到两个索引相遇</p>
+</li>
+<li>
+<p>最后，别忘了切分元素还放在数组第一位，这时我们要把它放到合适的位置</p>
+</li>
+<li>
+<p>可以证明，索引相遇的地方就是切分元素应该待的地方，所以交换第一个元素与索引相遇的地方的元素</p>
+</li>
+</ol>
+<p>这样，我们便完成了一次<strong>切分</strong>，接下来我们应该<strong>递归地</strong>对左右两边数组再次进行切分</p>
+<h2 id="代码举例">代码举例</h2>
+<pre><code class="language-java">import java.util.Random;
+
+public class Quick
+{
+	public static void sort(Comparable[] a)
+	{
+		sort(a, 0, a.length -1);
+	}
+	private static void sort(Comparable[] a, int lo, int hi)
+	{
+		//标准的快速排序
+		if(hi &lt;= lo)
+			return;
+		int j = partition(a, lo, hi);//切分，快排的关键点
+		sort(a, lo, j-1);//对左边排序
+		sort(a, j+1, hi);//对右边排序
+	}
+	private static int partition(Comparable[] a, int lo, int hi)
+	{
+		int i = lo, j = hi + 1;//左指针与右指针
+		Comparable v = a[lo];  //切分元素
+		while(true)
+		{
+			while(less(a[++i], v) )
+				if(i == hi) break;
+			//从左到右扫描找出第一个大于切分元素的单元
+			while(less(v, a[--j]) )
+				if(j == lo) break;
+			//从右到左扫描找出第一个小于切分元素的单元
+				
+			if(i &gt;= j) break;
+			exch(a, i, j);//交换两个单元
+		}
+		//注意此时切分元素仍然放在第一个位置，因此下一步要把它放到中间，而i,j已经在中间相遇，所以放在j处
+		exch(a, lo, j);//将v = a[j]放入正确的位置
+		return j;
+	}
+	private static boolean less(Comparable v, Comparable w)
+	{	return v.compareTo(w) &lt; 0;	}
+	private static void exch(Comparable[] a, int i, int j)
+	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
+	private static void show(Comparable[] a)
+	{
+		//在单行中打印数组
+		for(int i = 0; i&lt;a.length; i++)
+			System.out.print(a[i]+&quot; &quot;);
+	}
+	public static boolean isSorted(Comparable[] a)
+	{
+		//测试数组元素是否有序
+		for (int i=0; i&lt;a.length; i++)
+			if(less(a[i],a[i-1]))	return false;
+		return true;
+	}
+	
+	public static void main(String[] args)
+	{
+		Random r = new Random(1);
+		Integer[] a = new Integer[100];
+		for (int i = 0; i&lt;a.length; i++)
+		{
+			a[i] = r.nextInt()%1000;
+		}
+		for(Integer i : a)
+			System.out.println(i);
+		System.out.println(&quot;now let's sort it!&quot;);
+		Quick.sort(a);
+		for(Integer i : a)
+			System.out.println(i);
+
+	}
+
+}
+</code></pre>
+<h2 id="注意">注意</h2>
+<p>对于小数组来说，快速排序比插入排序满，并且，因为递归，快速排序的sort()方法在小数组中也会调用自己</p>
+<p>因此，在排序小数组时应该切换到插入排序。因此，可以对代码进行简单修改</p>
+<pre><code>if(hi &lt;= lo )
+	return;
+</code></pre>
+<p>变成</p>
+<pre><code>if(hi &lt;= lo + M)
+{
+	Insertion.sort(a, lo, hi);
+	return;
+}
+</code></pre>
+<h1 id="三向切分快速排序">三向切分快速排序🥨</h1>
+<p>我们的快速排序性能已经很好了，可是还有巨大的改进空间。例如，一个完全重复的子数组就不需要排序了，但我们的算法仍然会对它进行切分。所以，为了解决那些有大量重复元素的数组，我们选择一种名为<strong>三向切分</strong>的算法，又叫<strong>熵最优快速排序</strong>。</p>
+<h2 id="原理-2">原理</h2>
+<p>所谓<em>三向切分</em>，就是不同于普通的快排，只是分为左右两边数组，三向切分会把数组分为 <strong>左边 小； 中间 一样；右边 大</strong>。但是它的实现困扰了许多计算机学家。这里我们选择<strong>Dijkstra</strong>的切分方法。</p>
+<p>这里的实现，我们选择使用Comparable接口(而不是less())对a[i]进行三向比较。</p>
+<ol>
+<li>
+<p>我们维护四个索引 lo, hi, lt, gt, i</p>
+</li>
+<li>
+<p>选取数组第一个元素<strong>v</strong>为切分元素</p>
+</li>
+<li>
+<p>lo与lt索引指向数组第一个元素</p>
+</li>
+<li>
+<p>i指向数组第二个元素</p>
+</li>
+<li>
+<p>hi与gt索引指向数组最后一个元素</p>
+</li>
+<li>
+<p>让i所指的元素和切分元素比较</p>
+</li>
+<li>
+<p>如果<strong>a[i]小于v</strong>，交换a[lt]和a[i]，并将i和lt向右移动一格</p>
+</li>
+<li>
+<p>如果<strong>a[i]大于v</strong>，交换a[gt]和a[i]，并将gt向左移动一格</p>
+</li>
+<li>
+<p>如果<strong>a[i]等于v</strong></p>
+</li>
+<li>
+<p>一直重复6-&gt;9(7,8,9是互斥事件)，直到i遇见gt</p>
+</li>
+<li>
+<p>这样我们就已经完成了一次三向切分</p>
+</li>
+<li>
+<p>对左边和右边的元素再次<strong>递归地</strong>实现上面的过程，中间的元素可以不用动了</p>
+</li>
+</ol>
+<h2 id="代码举例-2">代码举例</h2>
+<pre><code class="language-java">import java.util.Random;
+
+public class Quick
+{
+	public static void sort(Comparable[] a)
+	{
+		sort3way(a, 0, a.length -1);
+	}
+	private static void sort3way(Comparable[] a, int lo, int hi)
+	{
+		//三切分快速排序，用来处理数据中有相同元素的数组的排序
+		if(hi &lt;= lo)
+			return;
+		int lt = lo, i = lo + 1, gt = hi;
+		Comparable v = a[lo];
+		while(i &lt;= gt)
+		{
+			int cmp = a[i].compareTo(v);
+			if		(cmp &lt; 0)
+				exch(a, lt++, i++);//放左边
+			else if (cmp &gt; 0)
+				exch(a, i, gt--);//放右边
+			else
+				i++;//留在原地，之后它就是在中间
+		}//这个循环实现了a[lo..lt-1] &lt; v = a[lt..gt] &lt; a[gt+1..hi]
+		sort3way(a, lo, lt - 1);
+		sort3way(a, gt + 1, hi);
+	}
+	private static boolean less(Comparable v, Comparable w)
+	{	return v.compareTo(w) &lt; 0;	}
+	private static void exch(Comparable[] a, int i, int j)
+	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
+	private static void show(Comparable[] a)
+	{
+		//在单行中打印数组
+		for(int i = 0; i&lt;a.length; i++)
+			System.out.print(a[i]+&quot; &quot;);
+	}
+	public static boolean isSorted(Comparable[] a)
+	{
+		//测试数组元素是否有序
+		for (int i=0; i&lt;a.length; i++)
+			if(less(a[i],a[i-1]))	return false;
+		return true;
+	}
+	
+	public static void main(String[] args)
+	{
+		Random r = new Random(1);
+		Integer[] a = new Integer[100];
+		for (int i = 0; i&lt;a.length; i++)
+		{
+			a[i] = r.nextInt()%1000;
+		}
+		for(Integer i : a)
+			System.out.println(i);
+		System.out.println(&quot;now let's sort it!&quot;);
+		Quick.sort(a);
+		for(Integer i : a)
+			System.out.println(i);
+
+	}
+
+}
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[归并排序]]></title>
+        <id>https://shame41.github.io/post/gui-bing-pai-xu/</id>
+        <link href="https://shame41.github.io/post/gui-bing-pai-xu/">
+        </link>
+        <updated>2021-04-28T08:42:37.000Z</updated>
+        <content type="html"><![CDATA[<p>一种优雅的递归算法，它能保证将任意长度为N的数组排序所需的时间和NlogN成正比，缺点也很明显，它所需要的<em>额外</em>空间和N成正比</p>
+<h1 id="原地归并的抽象方法">原地归并的抽象方法🍳</h1>
+<p>整个归并排序的核心😱</p>
+<h2 id="原理">原理</h2>
+<p>它的原理很简单</p>
+<ol>
+<li>将要归并的数组复制到一个新数组</li>
+<li>将复制的数组分成两份</li>
+<li>分成两份后，每个数组的<strong>开头</strong>都有一个索引，<strong>原数组也有一个索引</strong></li>
+<li>接下来将两个数组索引所指的元素进行比较</li>
+<li>比较后，把<strong>小的那个元素</strong>放到<strong>原来的数组的索引的位置</strong>（也即是开头）</li>
+<li>然后小的那个元素所在的数组的索引加1，即往右走，原数组的索引也加1</li>
+<li>一直重复，会有几种结束的情况：左半边取尽（解决方法就是之后一直取右半边元素），右半边取尽（与前者相反），原数组索引走到尽头（结束）</li>
+</ol>
+<p>但值得注意的是，我们仅仅是进行了<em>归并</em>这个操作，意味着两个数组的左边元素总小于右边元素，但不意味着它已经有序了</p>
+<h2 id="代码举例">代码举例</h2>
+<pre><code class="language-java">public static void merge(Comparable[] a, int lo, int mid, int hi)
+	{
+		//整个归并排序的灵魂，将两个数组原地归并
+		int i = lo, j = mid+1;
+		
+		for(int k=lo; k &lt;= hi; k++)//将a[lo..hi]整个复制到aux[lo...hi]
+			aux[k] = a[k];
+		for(int k=lo; k &lt;= hi; k++)//有两个游标 i j,分别对应左边和右边
+			if		(i &gt; mid)				a[k] = aux[j++];//左半边已经没有元素了
+			else if (j &gt; hi )				a[k] = aux[i++];//右半边已经没有元素了
+			else if (less(aux[j], aux[i]))	a[k] = aux[j++];//左半边当前值大于右半边当前值
+			else 							a[k] = aux[i++];//右半边当前值大于左半边当前值
+	}
+</code></pre>
+<h1 id="自顶向下的归并排序">自顶向下的归并排序🥞</h1>
+<p>本算法基于<strong>原地归并的抽象方法</strong>实现了另一种归并排序，这也是应用高效算法设计中<strong>分治思想</strong>的最典型的一个例子</p>
+<h2 id="原理-2">原理</h2>
+<p>实现上，相当于，先<strong>递归地</strong>把数组从中间分开，1变2，2变4，4变8....直到每个数组只有一个元素，然后再通过原地归并，<strong>递归地</strong>将数组归并，因为我们再分开数组的阶段已经递归了，因此归并使不必再递归（因为递归地实现 把数组分开 这个操作本身的“返回”必然是递归的，可以利用这个“返回”的递归）</p>
+<p>要理解归并排序就要了解这里的<strong>递归</strong>究竟是如何实现的</p>
+<h2 id="代码举例-2">代码举例</h2>
+<pre><code>import java.util.Random;
+
+//自顶向下的归并排序
+public class MergeUD
+{
+	private static Comparable[] aux;
+	
+	public static void sort(Comparable[] a)
+	{
+		aux = new Comparable[a.length];//一次性分配空间
+		sort(a, 0, a.length -1);
+	}
+	
+	private static void sort(Comparable[] a, int lo, int hi)
+	{
+		//将数组a[lo...hi]排序（递归地
+		if(hi &lt;= lo) return;
+		int mid = lo + (hi - lo) /2;
+		sort(a, lo, mid);//排序左半边
+		sort(a, mid+1, hi);//排序右半边
+		merge(a, lo, mid, hi);//归并结果
+	}
+	public static void merge(Comparable[] a, int lo, int mid, int hi)
+	{
+		//整个归并排序的灵魂，将两个数组原地归并
+		int i = lo, j = mid+1;
+		
+		for(int k=lo; k &lt;= hi; k++)//将a[lo..hi]整个复制到aux[lo...hi]
+			aux[k] = a[k];
+		for(int k=lo; k &lt;= hi; k++)//有两个游标 i j,分别对应左边和右边
+			if		(i &gt; mid)				a[k] = aux[j++];//左半边已经没有元素了
+			else if (j &gt; hi )				a[k] = aux[i++];//右半边已经没有元素了
+			else if (less(aux[j], aux[i]))	a[k] = aux[j++];//左半边当前值大于右半边当前值
+			else 							a[k] = aux[i++];//右半边当前值大于左半边当前值
+	}
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+		Random r = new Random(1);
+		Integer[] a = new Integer[10];
+		for (int i = 0; i&lt;a.length; i++)
+		{
+			a[i] = r.nextInt()%10;
+		}
+		for(Integer i : a)
+			System.out.println(i);
+		System.out.println(&quot;now let's sort it!&quot;);
+		MergeUD.sort(a);
+		for(Integer i : a)
+			System.out.println(i);
+	}
+	private static boolean less(Comparable v, Comparable w)
+	{	return v.compareTo(w) &lt; 0;	}
+	private static void exch(Comparable[] a, int i, int j)
+	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
+	private static void show(Comparable[] a)
+	{
+		//在单行中打印数组
+		for(int i = 0; i&lt;a.length; i++)
+			System.out.print(a[i]+&quot; &quot;);
+	}
+	public static boolean isSorted(Comparable[] a)
+	{
+		//测试数组元素是否有序
+		for (int i=0; i&lt;a.length; i++)
+			if(less(a[i],a[i-1]))	return false;
+		return true;
+	}
+	
+}
+</code></pre>
+<h1 id="自底向上的归并排序">自底向上的归并排序🍞</h1>
+<p>自顶向上归并是将大问题分解成许多小问题，然后通过解决这些小问题来解决整个大问题，尽管我们考虑的问题是归并两个大数组，实际上我们归并的数组大多数都非常小。</p>
+<h2 id="原理-3">原理</h2>
+<p>实现归并排序的另一种方法是先归并那些微型数组，然后再成对归并得到的子数组，如此这般，直到我们将整个数组归并在一起。这种实现方法比标准递归方法所需的代码量更少。首先进行一个一个元素的归并，然后两个两个元素的归并，然后四个四个元素的归并....</p>
+<h2 id="代码举例-3">代码举例</h2>
+<pre><code class="language-java">import java.util.Random;
+
+//自底向上的归并排序
+public class MergeDU
+{
+	private static Comparable[] aux;  //辅助数组
+	
+	public static void sort(Comparable[] a)
+	{
+		//进行lgN次两两归并;
+		int N = a.length;
+		aux = new Comparable[N];
+		for(int sz=1; sz&lt;N; sz=sz+sz) //sz是每个子数组大小
+			for(int lo=0; lo&lt;N-sz; lo=lo+sz+sz)//lo：子数组索引
+				merge(a, lo, lo+sz-1, Math.min(lo+sz+sz-1, N-1));
+	}
+	public static void merge(Comparable[] a, int lo, int mid, int hi)
+	{
+		//整个归并排序的灵魂，将两个数组原地归并
+		int i = lo, j = mid+1;
+		
+		for(int k=lo; k &lt;= hi; k++)//将a[lo..hi]整个复制到aux[lo...hi]
+			aux[k] = a[k];
+		for(int k=lo; k &lt;= hi; k++)//有两个游标 i j,分别对应左边和右边
+			if		(i &gt; mid)				a[k] = aux[j++];//左半边已经没有元素了
+			else if (j &gt; hi )				a[k] = aux[i++];//右半边已经没有元素了
+			else if (less(aux[j], aux[i]))	a[k] = aux[j++];//左半边当前值大于右半边当前值
+			else 							a[k] = aux[i++];//右半边当前值大于左半边当前值
+	}
+	public static void main(String[] args)
+	{
+		Random r = new Random(1);
+		Integer[] a = new Integer[100];
+		for (int i = 0; i&lt;a.length; i++)
+		{
+			a[i] = r.nextInt()%1000;
+		}
+		for(Integer i : a)
+			System.out.println(i);
+		System.out.println(&quot;now let's sort it!&quot;);
+		MergeDU.sort(a);
+		for(Integer i : a)
+			System.out.println(i);
+	}
+	
+	private static boolean less(Comparable v, Comparable w)
+	{	return v.compareTo(w) &lt; 0;	}
+	private static void exch(Comparable[] a, int i, int j)
+	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
+	private static void show(Comparable[] a)
+	{
+		//在单行中打印数组
+		for(int i = 0; i&lt;a.length; i++)
+			System.out.print(a[i]+&quot; &quot;);
+	}
+	public static boolean isSorted(Comparable[] a)
+	{
+		//测试数组元素是否有序
+		for (int i=0; i&lt;a.length; i++)
+			if(less(a[i],a[i-1]))	return false;
+		return true;
+	}
+}
+</code></pre>
+<h2 id="链表的排序">链表的排序</h2>
+<p>值得一提的是，自底向上的归并排序非常适合于用链表组织的数据，然鹅，我不会😭，再努努力吧...</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[初级排序算法]]></title>
+        <id>https://shame41.github.io/post/chu-ji-pai-xu-suan-fa/</id>
+        <link href="https://shame41.github.io/post/chu-ji-pai-xu-suan-fa/">
+        </link>
+        <updated>2021-04-28T08:40:19.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="选择排序">选择排序🍕</h1>
+<h2 id="原理">原理</h2>
+<p>首先，找到数组中的最小元素，其次将他和数组中的第一个元素交换位置。再次，在剩下的元素中，找到最小的元素将它与数组第二个元素交换位置。如此反复，直到将整个数组排序，这种排序叫做选择排序，它在<strong>不断选则剩余元素中的最小者</strong></p>
+<p>它有两个鲜明特点：</p>
+<p><strong>运行时间与输入无关</strong>： 一个已经有序的数组和一个混乱的数组都要经历<mark>N次交换</mark>和<mark>N^2/2次比较</mark></p>
+<p><strong>数据移动是最少的</strong>： 只移动了线性级别的次数</p>
+<h2 id="代码举例">代码举例</h2>
+<pre><code class="language-java">import java.util.Scanner;
+
+public class Selection
+{
+	public static void sort(Comparable[] a)//指的是任何实现comparable的数组，包括Integer/Double/等等（但是不包括int/double）
+	{
+		//将a[]按升序排列
+		int N = a.length;
+		for(int i=0; i&lt;N; i++)
+		{
+			//将a[i]和a[i+1..N]中最小的元素交换
+			int min = i;//最小元素的索引
+			for(int j = i+1; j&lt;N; j++)
+				if(less(a[j],a[min]))
+					min = j;//找到未排序序列中的最小元素
+			exch(a,i,min);
+		}
+	}
+	
+	private static boolean less(Comparable v, Comparable w)
+	{	return v.compareTo(w) &lt; 0;	}
+	private static void exch(Comparable[] a, int i, int j)
+	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
+	private static void show(Comparable[] a)
+	{
+		//在单行中打印数组
+		for(int i = 0; i&lt;a.length; i++)
+			System.out.print(a[i]+&quot; &quot;);
+	}
+	public static boolean isSorted(Comparable[] a)
+	{
+		//测试数组元素是否有序
+		for (int i=0; i&lt;a.length; i++)
+			if(less(a[i],a[i-1]))	return false;
+		return true;
+	}
+	
+	public static void main(String[] args)
+	{
+		Integer[] a = new Integer[10];
+		Scanner input = new Scanner(System.in);
+		for(int i = 0; i&lt;10; i++)
+			a[i] = input.nextInt();
+		for(int i = 0; i&lt;10; i++)
+			System.out.println(a[i]);
+		System.out.println(&quot;now let's sort it&quot;);
+		Selection.sort(a);
+		for(Integer i : a)
+			System.out.println(i);
+	}
+
+}
+</code></pre>
+<h1 id="插入排序">插入排序🍔</h1>
+<h2 id="原理-2">原理</h2>
+<p>将每一个元素插入到<strong>其他已经有序</strong>的元素中的适当位置，为了给要插入的元素腾出空间我们需要将其余所有元素在插入之前都向右移动一位，这就是插入排序。</p>
+<p>和选择排序不同的是，插入排序所需时间取决于输入中元素的初始顺序。</p>
+<p><strong>但是</strong>原理中插入元素时，要把其余元素右移一位，<strong>很显然这对于数组来说是很困难的</strong>，这里的一个取巧方案就是：选择第二个元素为<strong>索引</strong>，让它从左到右移动，每移动一格，<strong>就对索引左边元素进行一次冒泡排序</strong>，使新加入索引左边的元素能放在合适的位置</p>
+<p>选择排序有一个特点，使它具有重要的意义</p>
+<p>形如 2 1 4 3 6 5 8 7 10 9的数组 其中1-2，3-4.....成为一对<strong>倒置</strong></p>
+<p>当数组中倒置<strong>小于数组大小的某个倍数（11，22，33....)</strong>，那么这个数组就是<mark>部分有序的数组</mark></p>
+<p><strong>选择排序对于部分有序数组很有效</strong></p>
+<h2 id="代码举例-2">代码举例</h2>
+<pre><code class="language-java">import java.util.Scanner;
+
+public class Insertion
+{
+	public static void sort(Comparable[] a)
+	{
+		//将a[]按升序排序
+		int N = a.length;
+		for(int i=1; i&lt;N; i++)
+		{	//第一个元素已经排好
+			//将未排序的元素一个一个插入已排好的部分中
+			for(int j = i; j&gt;0 &amp;&amp; less(a[j],a[j-1]); j--)
+				exch(a, j, j-1);//在a[]中找到合适的位置插入并将后边的元素往后移
+			//这一步不是很好理解，可以试着自己画一画
+		}
+	}
+
+
+	private static boolean less(Comparable v, Comparable w)
+	{	return v.compareTo(w) &lt; 0;	}
+	private static void exch(Comparable[] a, int i, int j)
+	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
+	private static void show(Comparable[] a)
+	{
+		//在单行中打印数组
+		for(int i = 0; i&lt;a.length; i++)
+			System.out.print(a[i]+&quot; &quot;);
+	}
+	public static void main(String[] argvs)
+	{
+		Integer[] a = new Integer[10];
+		Scanner input = new Scanner(System.in);
+		for(int i = 0; i&lt;10; i++)
+			a[i] = input.nextInt();
+		for(int i = 0; i&lt;10; i++)
+			System.out.println(a[i]);
+		System.out.println(&quot;now let's sort it&quot;);
+		Insertion.sort(a);
+		for(Integer i : a)
+			System.out.println(i);
+	}
+	
+}
+</code></pre>
+<h1 id="希尔排序">希尔排序🥓</h1>
+<p>基于插入排序的一种算法，性能优越，但人们仍未能确定它的确切性能</p>
+<p>有经验的程序员有时会选择希尔排序，因为对于中等大小的数组它的运行时间是可以接受的，且代码量很小，还不需要使用额外的内存空间</p>
+<p><s>更有经验的程序员用.sort</s></p>
+<h2 id="原理-3">原理</h2>
+<p>希尔排序的中心思想就是：使数组中<strong>任意间隔为h</strong>的元素都是有序的，称之为<strong>h有序数组</strong>，可以证明，<mark>如果h是以1结尾</mark>（<em>注意，h是一个数列，以1结尾意味着最后h总会为1</em>），我们都有能将这个h数组排好。</p>
+<p>实现希尔排序的一种做法是，对于每个h，用插入排序将h个子数组独立地排序。但因为各个子数组相互独立，一种更简单的方法是 在h-子数组中将每个元素交换到比他大的元素之前去（将比它大的元素向右移动一格）。只需在插入排序的代码中将移动的元素的距离由1改为h即可。</p>
+<p>我们在实现使，h不是不变的，h是一个递增的数列，这次我们使用<mark>h = 1/2((3^k) - 1)</mark>  为什么要选择这个数组？很难回答，这涉及到希尔排序复杂的数学性质 。</p>
+<p>接下来说说具体实现步骤</p>
+<ol>
+<li>知道需要排序的数组的长度N</li>
+<li>h = 1/2((3^k) - 1)</li>
+<li>求出小于N/3的最大h</li>
+<li>进行距离为h的插入排序</li>
+<li>h = h/3</li>
+<li>再次排序...</li>
+<li>h = 1是最后一次排序</li>
+</ol>
+<h4 id="代码举例-3">代码举例</h4>
+<pre><code class="language-java">import java.util.Random;
+
+public class Shell
+{
+	public static void sort(Comparable[] a)
+	{
+		//将a[]按升序排列
+		int N = a.length;
+		int h = 1;
+		while(h &lt; N/3)
+			h = 3*h + 1;//h有1,4,13,40,121,364,1093...//注意，这个序列不一定是最好的，但已经够用
+        //值得一提 h = 3*h +1是 h = 1/2((3^k) - 1)的递归形式
+		while(h&gt;=1)
+		{
+			//将数组变为h有序
+			for(int i=h; i&lt;N; i++)
+			{
+				//插入排序外循环
+				for(int j=i; j&gt;=h &amp;&amp; less(a[j],a[j-1]); j-=h)
+					exch(a, j, j-h);
+			}	
+			h = h/3;//间隔会越来越小，知道h为1时排好
+		}
+	}
+	private static boolean less(Comparable v, Comparable w)
+	{	return v.compareTo(w) &lt; 0;	}
+	private static void exch(Comparable[] a, int i, int j)
+	{	Comparable t = a[i]; a[i] = a[j]; a[j] = t;	}
+	private static void show(Comparable[] a)
+	{
+		//在单行中打印数组
+		for(int i = 0; i&lt;a.length; i++)
+			System.out.print(a[i]+&quot; &quot;);
+	}
+
+	
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+		Random r = new Random(1);
+		Integer[] a = new Integer[100];
+		for (int i = 0; i&lt;a.length; i++)
+		{
+			a[i] = r.nextInt()%1000;
+		}
+		for(Integer i : a)
+			System.out.println(i);
+		System.out.println(&quot;now let's sort it!&quot;);
+		Shell.sort(a);
+		for(Integer i : a)
+			System.out.println(i);
+	}
+
+}
+</code></pre>
 ]]></content>
     </entry>
     <entry>

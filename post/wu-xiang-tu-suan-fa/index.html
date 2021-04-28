@@ -212,7 +212,7 @@
                     <article class="post-wrap">
                         <header class="post-header">
                             <h1 class="post-title">
-                                关于
+                                无向图算法
                             </h1>
                             
                                 <!--en-->
@@ -222,12 +222,12 @@
                                         shame41
                                     </a>
                                     <span class="post-time">
-                                Date: <a href="#">2019-01-25</a>
+                                Date: <a href="#">2021-04-28</a>
                             </span>
                                     <span class="post-readtime">Reading Time:<a
-                                    href="#">0.3
+                                    href="#">6.8
                                     mins</a></span>
-                                    <span class="post-words">words:<a href="#">76</a></span>
+                                    <span class="post-words">words:<a href="#">1694</a></span>
                                     
                                             Views:
                                             <span data-hk-page="current"> - </span>
@@ -237,29 +237,217 @@
                         </header>
                         
                         <div class="post-content">
-                            <blockquote>
-<p>欢迎来到我的小站呀，很高兴遇见你！🤝</p>
-</blockquote>
-<h2 id="关于本站">🏠 关于本站</h2>
-<p>一个不成熟的尝试，内涵一些学习经验还有笔记</p>
-<h2 id="博主是谁">👨‍💻 博主是谁</h2>
-<p>华中科技大学软件工程大一的学生</p>
-<h2 id="兴趣爱好">⛹ 兴趣爱好</h2>
-<p>音乐</p>
-<h2 id="联系我呀">📬 联系我呀</h2>
-<p>QQ 1457140443<br>
-BILIBILI https://space.bilibili.com/3088812</p>
+                            <p>在无向图中，我们只有两个对象<strong>边（edge)<strong>和</strong>顶点（vertex）</strong>。其中顶点用整数来表示，边不用表示，因为<strong>边是两个顶点直接的一种关系</strong>，只用判断两个顶点有无这种关系即可。</p>
+<h1 id="无向图的数据类型">无向图的数据类型🚗</h1>
+<p>在这里我们选择使用<strong>邻接表数组</strong>来表示无向图，即<mark>一个以顶点为索引的列表数组，其中每个元素都是和该顶点相邻的顶点</mark></p>
+<figure data-type="image" tabindex="1"><img src="https://shame41.github.io/post-images/1619601532746.png" alt="" loading="lazy"></figure>
+<p><img src="https://shame41.github.io/post-images/1619601559398.png" alt="" loading="lazy"><br>
+具体实现上，我们的数组选择一个<strong>背包(bag)数组</strong>因为顶点的邻接元素是没有优先级的，而背包内元素也没有优先级，很符合我们的要求。</p>
+<h2 id="代码举例">代码举例</h2>
+<p>下面实现了一个无向图的算法，但它不能单独工作，因为还需要实现一个背包的数据类型，如需要背包的源码，请看我的其他博客，当然你也可以自己实现。</p>
+<pre><code class="language-java">public class Graph
+{
+	private final int V;		//顶点数目
+	private int E;				//边的数目
+	public Bag&lt;Integer&gt;[] adj;	//邻接表
+	public Graph(int V)
+	{
+		//创建一个顶点数目为V的图
+		this.V = V;
+		this.E = 0;
+		adj = (Bag&lt;Integer&gt;[]) new Bag[V];
+		for(int v = 0; v&lt;V; v++)
+			adj[v] = new Bag&lt;Integer&gt;();
+	}
+	public int V() {return V;}
+	public int E() {return E;}
+	public void addEdge(int v, int w)
+	{
+		adj[v].add(w);
+		adj[w].add(v);
+		E++;
+	}
+	public Iterable&lt;Integer&gt; adj(int v)
+	{
+		return adj[v];
+	}
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+
+	}
+
+}
+</code></pre>
+<p>注意，我们的这个图仅仅实现了将原有的结点连接!</p>
+<h1 id="深度优先搜索">深度优先搜索🚲</h1>
+<h2 id="原理">原理</h2>
+<p>深度优先搜索的策略是，Tremaux搜索</p>
+<ol>
+<li>选择一条没有被标记过的通道，在你走过的路上<strong>铺上绳子</strong></li>
+<li>标记所有你第一次路过的路口和通道</li>
+<li>当来到一个标记过的路口时，沿着绳子倒退回上一个路口</li>
+<li>当回退到的路口已经没有可以走的通道时继续回退</li>
+</ol>
+<p>可以证明，最终绳子会连接起点和终点（假如起点和终点是可连通的）</p>
+<p>这仅仅是一个热身，用代码实现上述步骤，需要通过<strong>递归</strong>来实现</p>
+<p>具体的实现方式是</p>
+<ol>
+<li>我们创建一个布尔数组marked，里边存放图的所有结点，用来表示<strong>是否被标记过</strong>。</li>
+<li>再创建一个数组edgeTo，来表示<strong>从起点到结点A的已知路径上的最后一个顶点</strong>，A就是索引，这个顶点就是索引上的元素。</li>
+<li>对起点s进行一个递归操作dfs( )</li>
+<li>这个操作<strong>会标记被操作过的顶点v</strong>，然后从这个顶点v的所有邻居结点里找<strong>没有被标记过的结点w</strong></li>
+<li>只要找到，就会将w的上一个结点设为v，即edgeTo[w] = v，意味着从起点到终点的路径上，经过w与v，并且二者是由同一条边连着的</li>
+<li><strong>然后继续对w进行操作dfs( )</strong>（递归的实现）</li>
+</ol>
+<figure data-type="image" tabindex="2"><img src="https://shame41.github.io/post-images/1619601588313.png" alt="" loading="lazy"></figure>
+<p>这样我们就得到了两个漂亮的数组，<strong>一个marked[]数组，索引是图的各个结点，如果元素为true则说明这个结点与起点相邻</strong>，<strong>一个edgeTo[]数组，索引是图的各个结点，元素是这个结点的“上一个结点”</strong>，通过这个数组，我们可以找到一条从起点到任意结点的路径。</p>
+<p>当然，直接的表示出一条从顶点到终点的路不是那么简单。</p>
+<p>具体的操作是：对于一个终点x，我们先让x = edgeTo[x]，意思是x结点沿着路径向终点移动，然后再将x压入栈中，不断重复上面的操作，就能得到一个栈顶是起点s的堆栈，对这个堆栈执行出栈操作，便能得到一条起点到终点的路径。</p>
+<h2 id="代码举例-2">代码举例</h2>
+<p>自行设计代码中所需的堆栈，或者在其他文章里找到</p>
+<pre><code class="language-java">import java.util.Stack;
+
+public class DFS
+{
+	private boolean[] marked;		//在这个顶点上调用过dfs()吗
+	private int[] edgeTo;			//从起点到一个顶点的已知路径上的最后一个顶点
+	private final int s;			//起点
+	
+	public DFS(Graph G, int s)
+	{
+		marked = new boolean[G.V()];
+		edgeTo = new int[G.V()];
+		this.s = s;
+		dfs(G, s);
+	}
+	private void dfs(Graph G, int v)
+	{
+		marked[v] = true;
+		for(int w : G.adj(v))
+			if(!marked[w])
+			{
+				edgeTo[w] = v;
+				dfs(G, w);
+			}
+	}
+	
+	public boolean hasPathTo(int v)
+	{
+		return marked[v];
+	}
+	public Iterable&lt;Integer&gt; pathTo(int v)
+	{
+		if(!hasPathTo(v))
+			return null;
+		Stack&lt;Integer&gt; path = new Stack&lt;Integer&gt;();
+		for(int x = v; x!= s; x = edgeTo[x])
+			path.push(x);
+		path.push(s);
+		return path;
+	}
+	
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+
+	}
+
+}
+
+</code></pre>
+<h1 id="广度优先搜索">广度优先搜索🛵</h1>
+<p>有时，我们会关注这个问题 <em>单点最短路径。从s到给定点v是否存在一条路径，如果有，找出最短的那条</em></p>
+<p>深度优先搜索不适合这个问题，而广度优先搜索是解决这个问题的关键！</p>
+<h2 id="原理-2">原理</h2>
+<p>我们要从s出发寻找v，广度优先搜索的做法是，从s开始，在所有<strong>由一条边就可以到达</strong>的顶点中寻找v，如果找不到，我们就继续在与s<strong>距离两条边</strong>的所有顶点中寻找v，如此一直进行。具体实现方法如下：</p>
+<ol>
+<li>创建一个<em>队列</em>来保存所有<strong>已经被标记过但其邻居节点还没有被检查过的顶点</strong></li>
+<li>与深度优先搜索一样创立一个edgeTo数组和marked数组</li>
+<li>将起点加入队列，并将marked[s]设为true</li>
+<li>如果队列不是空的，便让队列出列一个元素</li>
+<li>查看被出列的那个元素的所有邻居结点</li>
+<li>对于那几个邻居节点中没有被标记过的结点w，标记它，并使edgeTo[w] = v，然后将它入列</li>
+<li>重复第四步，直到队列为空</li>
+</ol>
+<h2 id="代码举例-3">代码举例</h2>
+<pre><code class="language-java">import java.util.Stack;
+
+public class BFS
+{
+	private boolean[] marked;		//到达该顶点的最短路径已知吗？
+	private int[] edgeTo;			//到达该顶点的已知路径上的最后一个顶点
+	private final int s;			//起点
+	
+	public BFS(Graph G, int s)
+	{
+		marked = new boolean[G.V()];
+		edgeTo = new int[G.V()];
+		this.s = s;
+		bfs(G, s);
+	}
+	private void bfs(Graph G, int s)
+	{
+		LinkListQueue&lt;Integer&gt; queue = new LinkListQueue&lt;Integer&gt;();
+		marked[s] = true;		//标记起点
+		queue.enqueue(s);		//将它加入队列
+		while(!queue.isEmpty())
+		{
+			int v = queue.dequeue();//从队列中删去下一个顶点
+			for(int w : G.adj(v))
+				if(!marked[w])
+				{
+					edgeTo[w] = v;		//保存最短路径的最后一条边
+					marked[w] = true;	//标记它，因为最短路径已知
+					queue.enqueue(w);	//并将它加入队列中
+				} 
+		}
+	}
+	
+	public boolean hasPathTo(int v)
+	{
+		return marked[v];
+	}
+	public Iterable&lt;Integer&gt; pathTo(int v)
+	{
+		if(!hasPathTo(v))
+			return null;
+		Stack&lt;Integer&gt; path = new Stack&lt;Integer&gt;();
+		for(int x = v; x!= s; x = edgeTo[x])
+			path.push(x);
+		path.push(s);
+		return path;
+	}
+	
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+
+	}
+
+}
+
+</code></pre>
 
                         </div>
                         
                             <div class="post-toc">
                                 <ul class="markdownIt-TOC">
-<li>
+<li><a href="#%E6%97%A0%E5%90%91%E5%9B%BE%E7%9A%84%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B">无向图的数据类型🚗</a>
 <ul>
-<li><a href="#%E5%85%B3%E4%BA%8E%E6%9C%AC%E7%AB%99">🏠 关于本站</a></li>
-<li><a href="#%E5%8D%9A%E4%B8%BB%E6%98%AF%E8%B0%81">👨‍💻 博主是谁</a></li>
-<li><a href="#%E5%85%B4%E8%B6%A3%E7%88%B1%E5%A5%BD">⛹ 兴趣爱好</a></li>
-<li><a href="#%E8%81%94%E7%B3%BB%E6%88%91%E5%91%80">📬 联系我呀</a></li>
+<li><a href="#%E4%BB%A3%E7%A0%81%E4%B8%BE%E4%BE%8B">代码举例</a></li>
+</ul>
+</li>
+<li><a href="#%E6%B7%B1%E5%BA%A6%E4%BC%98%E5%85%88%E6%90%9C%E7%B4%A2">深度优先搜索🚲</a>
+<ul>
+<li><a href="#%E5%8E%9F%E7%90%86">原理</a></li>
+<li><a href="#%E4%BB%A3%E7%A0%81%E4%B8%BE%E4%BE%8B-2">代码举例</a></li>
+</ul>
+</li>
+<li><a href="#%E5%B9%BF%E5%BA%A6%E4%BC%98%E5%85%88%E6%90%9C%E7%B4%A2">广度优先搜索🛵</a>
+<ul>
+<li><a href="#%E5%8E%9F%E7%90%86-2">原理</a></li>
+<li><a href="#%E4%BB%A3%E7%A0%81%E4%B8%BE%E4%BE%8B-3">代码举例</a></li>
 </ul>
 </li>
 </ul>
@@ -277,7 +465,7 @@ BILIBILI https://space.bilibili.com/3088812</p>
 
                                             <p class="copyright-item">
                                                 <span>Permalink:</span>
-                                                <span><a href="https://shame41.github.io/post/about/">https://shame41.github.io/post/about/</a></span>
+                                                <span><a href="https://shame41.github.io/post/wu-xiang-tu-suan-fa/">https://shame41.github.io/post/wu-xiang-tu-suan-fa/</a></span>
                                             </p>
 
                                             <p class="copyright-item">
@@ -292,9 +480,9 @@ BILIBILI https://space.bilibili.com/3088812</p>
                                                         <span style="margin-right:15px">
                                                     <i class="post-share"></i>
                                                     <span>Share:</span>
-                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://shame41.github.io/post/about/"><i class="fa fa-qrcode"></i></a>
-                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://shame41.github.io/post/about/&sharesource=qzone&title=关于&pics=https://shame41.github.io/images/avatar.png?v=1619601640796&summary="><i class="fa fa-qq"></i></a>
-                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://shame41.github.io/post/about/&sharesource=weibo&title=关于 + " - " + &pic="https://shame41.github.io/images/avatar.png?v=1619601640796 "><i class="fa fa-weibo "></i></a>
+                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://shame41.github.io/post/wu-xiang-tu-suan-fa/"><i class="fa fa-qrcode"></i></a>
+                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://shame41.github.io/post/wu-xiang-tu-suan-fa/&sharesource=qzone&title=无向图算法&pics=https://shame41.github.io/images/avatar.png?v=1619601640796&summary="><i class="fa fa-qq"></i></a>
+                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://shame41.github.io/post/wu-xiang-tu-suan-fa/&sharesource=weibo&title=无向图算法 + " - " + &pic="https://shame41.github.io/images/avatar.png?v=1619601640796 "><i class="fa fa-weibo "></i></a>
                                                         
                                                             <div class="reward ">
                                                                 <div class="reward-button ">&yen;
@@ -324,6 +512,10 @@ BILIBILI https://space.bilibili.com/3088812</p>
                                                                                 <section class="post-nav">
                                                                                     
                                                                                             
+                                                                                                <a class="next" rel="next" href="https://shame41.github.io/post/jia-quan-tu-suan-fa/">
+                                                                                                    加权图算法
+                                                                                                </a>
+                                                                                                
                                                                                 </section>
                     </article>
                 </div>

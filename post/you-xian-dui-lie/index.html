@@ -212,7 +212,7 @@
                     <article class="post-wrap">
                         <header class="post-header">
                             <h1 class="post-title">
-                                关于
+                                优先队列
                             </h1>
                             
                                 <!--en-->
@@ -222,12 +222,12 @@
                                         shame41
                                     </a>
                                     <span class="post-time">
-                                Date: <a href="#">2019-01-25</a>
+                                Date: <a href="#">2021-04-28</a>
                             </span>
                                     <span class="post-readtime">Reading Time:<a
-                                    href="#">0.3
+                                    href="#">10.1
                                     mins</a></span>
-                                    <span class="post-words">words:<a href="#">76</a></span>
+                                    <span class="post-words">words:<a href="#">2323</a></span>
                                     
                                             Views:
                                             <span data-hk-page="current"> - </span>
@@ -237,29 +237,320 @@
                         </header>
                         
                         <div class="post-content">
-                            <blockquote>
-<p>欢迎来到我的小站呀，很高兴遇见你！🤝</p>
-</blockquote>
-<h2 id="关于本站">🏠 关于本站</h2>
-<p>一个不成熟的尝试，内涵一些学习经验还有笔记</p>
-<h2 id="博主是谁">👨‍💻 博主是谁</h2>
-<p>华中科技大学软件工程大一的学生</p>
-<h2 id="兴趣爱好">⛹ 兴趣爱好</h2>
-<p>音乐</p>
-<h2 id="联系我呀">📬 联系我呀</h2>
-<p>QQ 1457140443<br>
-BILIBILI https://space.bilibili.com/3088812</p>
+                            <p>很多情况下，我们需要这么一种工具，它能非常快速地提供给我们一个数组中最大的元素(最小同理)。很显然，一种简单粗暴的解决方式就是在取出元素时排序整个数组，但是这样太慢了，因为我们只是要最大的，此时数组不一定要有序，因此我们引入一种工具：<strong>优先队列</strong></p>
+<h1 id="二叉堆优先队列">二叉堆优先队列🥖</h1>
+<p>这里我们只介绍二叉堆组成的优先队列，在最坏情况下，它能保证将元素插入或取出优先队列都只需要<strong>logN</strong>的复杂度，实现整体最优。👍</p>
+<h2 id="原理">原理</h2>
+<p><strong>二叉堆</strong>的定义</p>
+<ol>
+<li>
+<p>当一棵二叉树的每个节点都大于等于(小于等于同理)它的两个子节点时，它被称为<strong>堆有序</strong></p>
+</li>
+<li>
+<p>根节点是堆有序的二叉树的最值节点</p>
+</li>
+<li>
+<p><strong>二叉堆</strong>是一组能够用<strong>堆有序</strong>的<strong>完全二叉树</strong>（你不会不知道什么是完全二叉树吧）排序的元素，并在数组中按层级储存</p>
+</li>
+<li>
+<p>为了方便，<strong>我们不使用第一个节点</strong>，这样，位置为k的<strong>父节点的位置为k/2</strong>，两个<strong>子节点分别是2k或2k+1</strong></p>
+</li>
+</ol>
+<p>堆有两个基本操作，<strong>插入元素</strong>，<strong>删除最值元素</strong></p>
+<p><strong>插入元素</strong>：我们将新元素加到数组末尾，然后增加堆的大小N，并让这个元素<strong>上浮</strong>到合适位置</p>
+<p><strong>删除最值元素</strong>：将数组顶端元素删去最大的元素并返回，然后<strong>把数组最后一个元素放到顶端</strong>，让这个元素<strong>下沉</strong>到合适位置</p>
+<p>我们所说的<strong>上浮</strong>与<strong>下沉</strong>指的是<strong>堆的有序化</strong>，即将元素放到它应在在的位置</p>
+<p><strong>上浮</strong>：如果堆的有序状态因为某个节点<strong>变得比它的父节点更大</strong>而被打破，那么我们就需要<strong>交换它和它的父节点</strong>来修复堆。很显然，交换后，这个节点比它的两个子节点更大，<strong>但这个节点仍然可能比它现在的父节点大</strong>，因此我们要重复上面的操作，直到有序。</p>
+<p><strong>下沉</strong>：如果堆的有序状态因为某个节点<strong>变得比它的两个子节点或者其中之一更小</strong>而被打破了，那么我们需要<strong>交换它和它的两个子节点中最大的那个</strong>来修复堆，不断重复上述操作，直到它的子节点都比它小或者到达了堆的底部。</p>
+<h2 id="代码举例">代码举例</h2>
+<p>值得一提的是，堆可以分为<strong>大顶堆</strong>和<strong>小顶堆</strong>，这里我们实现前者</p>
+<pre><code class="language-java">import java.util.Random;
+public class MaxPQ&lt;Key extends Comparable&lt;Key&gt;&gt;
+{
+	//基于堆的优先队列
+	private Key[] pq;	//基于堆的完全二叉树
+	private int N = 0;	//储存于pq[1..N]中，pq[0]没有使用
+	
+	public MaxPQ(int maxN)
+	{
+		pq = (Key[]) new Comparable[maxN+1];
+	}
+	public boolean isEmpty()
+	{
+		return N == 0;
+	}
+
+	public void insert(Key v)
+	{
+		pq[++N] = v;
+		swim(N);
+	}
+	public Key delMax()
+	{
+		Key max = pq[1];
+		exch(1, N--);
+		pq[N+1] = null;
+		sink(1);
+		return max;
+	}
+	
+	private boolean less(int i, int j)
+	{
+		return pq[i].compareTo(pq[j]) &lt; 0;
+	}
+	private void exch(int i, int j)
+	{
+		Key t = pq[i];
+		pq[i] = pq[j];
+		pq[j] = t;
+	}
+	private void swim(int k)//上浮
+	{
+		while(k&gt;1 &amp;&amp; less(k/2, k))
+		{
+			exch(k/2, k);
+			k = k/2;
+		}
+	}
+	private void sink(int k)
+	{
+		while(2*k &lt;= N)
+		{
+			int j = 2*k;
+			if(j&lt;N &amp;&amp; less(j, j+1))
+				j++;//确定两个子节点哪个更大
+			if(!less(k, j))
+				break;//再比较最大的子节点与父节点的关系
+			exch(k, j);
+			k = j;
+		}
+	}
+	
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stub
+		MaxPQ&lt;Integer&gt; a = new MaxPQ(1000000);
+		Random r = new Random(13);
+		for (int i = 0; i&lt;1000000; i++)
+		{
+			a.insert(r.nextInt()%1000000);
+		}
+		System.out.println(a.delMax());
+	}
+
+}
+
+</code></pre>
+<h1 id="堆排序">堆排序🧀</h1>
+<p>如果将所有元素插入一个小顶堆，然后重复调用<strong>删除最小元素</strong>的操作来将它们按顺序删去。这就是堆排序。</p>
+<h2 id="原理-2">原理</h2>
+<p>堆排序有两个阶段 <strong>堆的构造</strong>，<strong>下沉排序</strong>。</p>
+<p><strong>堆的构造</strong>：我们将原始数组重新组织安排进一个堆中。一个无脑的方法，即从左到右遍历数组，对每个元素都进行上浮操作，这样能在NlogN内实现。可是这样<strong>太笨了</strong>😫  一种更聪明更高效的方法是 ：<strong>从N/2开始向左对数组中的元素进行下沉</strong>，为什么要这么做呢？因为由于<strong>完全二叉树</strong>的数学性质，可以发现，N/2之后的所有元素都是<strong>叶</strong>，显然，叶是不需要下沉的，所以我们只用下沉N/2之前的元素。</p>
+<p><strong>下沉排序</strong>：我们从堆中按<strong>递减顺序</strong>取出所有元素并得到排序结果。具体来说，我们将数组第一个元素(数组[0]是不用的，所以第一个元素是数组[1])<strong>与最后一个元素交换，然后下沉交换后的第一个元素</strong>。(与选择排序相似,但所需的比较少得多)</p>
+<h2 id="代码举例-2">代码举例</h2>
+<pre><code class="language-java">public class PQsort
+{
+	public static void sort(Comparable[] a)
+	{
+		//堆排序
+		int N = a.length;
+		Comparable[] pb = new Comparable[N+1]; 
+		for(int i=0; i&lt;N; i++)
+			pb[i+1] = a[i];
+		for(int k = N/2; k &gt;= 1; k--)
+			sink(pb, k, N);//用于构造大顶堆
+		while(N &gt; 1)
+		{
+			exch(pb, 1, N--);
+			sink(pb, 1, N);
+		}
+		for(int i=0; i&lt;a.length; i++)
+			a[i] = pb[i+1];
+	}
+	private static void sink(Comparable[] a, int k, int N)
+	{
+		while(2*k &lt;= N)
+		{
+			int j = 2*k;
+			if(j&lt;N &amp;&amp; less(a, j, j+1))
+				j++;
+			if(!less(a, k, j))
+				break;
+			exch(a, k, j);
+			k = j;
+		}
+	}
+	private static boolean less(Comparable[] pq, int i, int j)
+	{
+		return pq[i].compareTo(pq[j]) &lt; 0;
+	}
+	private static void exch(Comparable[] pq, int i, int j)
+	{
+		Comparable t = pq[i];
+		pq[i] = pq[j];
+		pq[j] = t;
+	}
+	private static void show(Comparable[] a)
+	{
+		//在单行中打印数组
+		for(int i = 0; i&lt;a.length; i++)
+			System.out.print(a[i]+&quot; &quot;);
+	}
+	public static void main(String[] args)
+	{
+		Integer[] a = {19,15,18,20,5,24,1,13,16,12,5};
+		sort(a);
+		show(a);
+	}
+
+}
+</code></pre>
+<h1 id="索引优先队列">索引优先队列🥗</h1>
+<p>我们的优先队列能做到的事情很少，只能向其中加入元素和获取并删除最值元素。然鹅在很多应用中，允许使用<mark>已经进入优先队列中的元素</mark>是很有必要的（如Dijkstra算法）。要做到这一点的一种简单方法就是给每个元素一个<strong>索引</strong>。</p>
+<h2 id="原理-3">原理</h2>
+<p>索引优先队列用一个<strong>整数</strong>和队列中的<strong>元素</strong>进行关联，这样，当我们要访问队列中的元素时，只需要用它所关联的整数进行索引查找就可以了。</p>
+<p>为此，我们创立三个数组  pq，qp，elements</p>
+<p>其中，pq[qp[i]] = qp[pq[i]] = i，这样，当我们想访问元素“b”时，我们就可以通过elements[10]来访问它（其中10是与&quot;b &quot;相关的整数），而当我们想要知道元素&quot;b&quot;在<strong>二叉堆</strong>中处于哪个位置时，我们可以通过qp[10]。到现在我们只用了两个数组(elements和qp)，那pq数组呢？</p>
+<p>首先，作为优先队列的一种，它一定能通过<strong>上浮</strong>和<strong>下沉</strong>来使堆<strong>有序化</strong>。在普通优先队列中，我们直接对队列的元素进行操作，而在索引优先队中，<strong>储存元素的数组已经不再具有二叉堆的性质</strong>，取而代之的使pq数组，因此在索引优先队列中，<strong>储存元素的数组用来快速索引查找，pq数组作为储存元素的数组的映射，具有堆的性质，因此我们的上浮下沉都是对pq数组操作而不是对储存元素的数组</strong>。</p>
+<p>当然，为了保持pq[qp[i]] = qp[pq[i]] = i的性质，我们在改变pq后也要相应改变qp</p>
+<p><img src="https://shame41.github.io/post-images/1619599813207.jpg" alt="" loading="lazy"><br>
+<img src="https://shame41.github.io/post-images/1619599791979.jpg" alt="" loading="lazy"></p>
+<h2 id="代码举例-3">代码举例</h2>
+<pre><code class="language-java">![u=2489824036,314288118&amp;fm=26&amp;gp=0](C:\Users\Administrator\Desktop\新建文件夹\u=2489824036,314288118&amp;fm=26&amp;gp=0.png)public class IndexMinPQ&lt;Key extends Comparable&lt;Key&gt;&gt;
+{
+	private int N;				//amount of the elements in PQ
+	private int[] pq;			//index binary heap, begin at '1'
+	private int[] qp;			//inverted pq : qp[pq[i]] = pq[qp[i]] = i
+	private Key[] keys;			//elements with priority
+	public IndexMinPQ(int maxN)
+	{
+		keys = (Key[]) new Comparable[maxN + 1];
+		pq = new int[maxN + 1];
+		qp = new int[maxN + 1];
+		for(int i = 0; i &lt;= maxN; i++)
+			qp[i] = -1;
+	}
+	private void exch(int i, int j)
+	{
+		int t = pq[i];
+		pq[i] = pq[j];
+		pq[j] = t;
+		t = qp[pq[i]];
+		qp[pq[i]] = qp[pq[j]];
+		qp[pq[j]] = t;
+	}
+	private void swim(int k)//上浮
+	{
+		while(k&gt;1 &amp;&amp; less(k/2, k))
+		{
+			exch(k/2, k);
+			k = k/2;
+		}
+	}
+	private void sink(int k)
+	{
+		while(2*k &lt;= N)
+		{
+			int j = 2*k;
+			if(j&lt;N &amp;&amp; less(j, j+1))
+				j++;
+			if(!less(k, j))
+				break;
+			exch(k, j);
+			k = j;
+		}
+	}
+	private boolean less(int i, int j)
+	{
+		return keys[pq[i]].compareTo(keys[pq[j]]) &gt; 0;
+	}
+	public boolean isEmpty()
+	{
+		return N == 0;
+	}
+	public boolean contains(int k)
+	{
+		return qp[k] != -1;
+	}
+	public void insert(int k, Key key)
+	{
+		N++;
+		qp[k] = N;
+		pq[N] = k;
+		keys[k] = key;
+		swim(N);
+	}
+	public Key min()
+	{
+		return keys[pq[1]];
+	}
+	public int delMin()
+	{
+		int indexOfMin = pq[1];
+		exch(1, N--);
+		sink(1);
+		keys[pq[N+1]] = null;
+		qp[pq[N+1]] = -1;
+		return indexOfMin;
+	}
+
+	public int minIndex()
+	{
+		return pq[1];
+	}
+	public void change(int k, Key key)
+	{
+		keys[k] = key;
+		swim(qp[k]);
+		sink(qp[k]);
+	}
+	public void delete(int k)
+	{
+		int index = qp[k];
+		exch(index, N--);
+		swim(index);
+		sink(index);
+		keys[k] = null;
+		qp[k] = -1;
+	}
+	public static void main(String[] args)
+	{
+		// TODO Auto-generated method stu
+		IndexMinPQ&lt;Integer&gt; a = new IndexMinPQ&lt;Integer&gt;(10);
+		a.insert(1,11);
+		a.insert(3,6);
+		a.insert(4,14);
+		a.insert(6,3);
+		a.insert(8,8);
+		a.insert(10,2);
+		a.delete(4);
+		System.out.println(a.minIndex());
+ercha
+	}
+
+}
+</code></pre>
 
                         </div>
                         
                             <div class="post-toc">
                                 <ul class="markdownIt-TOC">
-<li>
+<li><a href="#%E4%BA%8C%E5%8F%89%E5%A0%86%E4%BC%98%E5%85%88%E9%98%9F%E5%88%97">二叉堆优先队列🥖</a>
 <ul>
-<li><a href="#%E5%85%B3%E4%BA%8E%E6%9C%AC%E7%AB%99">🏠 关于本站</a></li>
-<li><a href="#%E5%8D%9A%E4%B8%BB%E6%98%AF%E8%B0%81">👨‍💻 博主是谁</a></li>
-<li><a href="#%E5%85%B4%E8%B6%A3%E7%88%B1%E5%A5%BD">⛹ 兴趣爱好</a></li>
-<li><a href="#%E8%81%94%E7%B3%BB%E6%88%91%E5%91%80">📬 联系我呀</a></li>
+<li><a href="#%E5%8E%9F%E7%90%86">原理</a></li>
+<li><a href="#%E4%BB%A3%E7%A0%81%E4%B8%BE%E4%BE%8B">代码举例</a></li>
+</ul>
+</li>
+<li><a href="#%E5%A0%86%E6%8E%92%E5%BA%8F">堆排序🧀</a>
+<ul>
+<li><a href="#%E5%8E%9F%E7%90%86-2">原理</a></li>
+<li><a href="#%E4%BB%A3%E7%A0%81%E4%B8%BE%E4%BE%8B-2">代码举例</a></li>
+</ul>
+</li>
+<li><a href="#%E7%B4%A2%E5%BC%95%E4%BC%98%E5%85%88%E9%98%9F%E5%88%97">索引优先队列🥗</a>
+<ul>
+<li><a href="#%E5%8E%9F%E7%90%86-3">原理</a></li>
+<li><a href="#%E4%BB%A3%E7%A0%81%E4%B8%BE%E4%BE%8B-3">代码举例</a></li>
 </ul>
 </li>
 </ul>
@@ -277,7 +568,7 @@ BILIBILI https://space.bilibili.com/3088812</p>
 
                                             <p class="copyright-item">
                                                 <span>Permalink:</span>
-                                                <span><a href="https://shame41.github.io/post/about/">https://shame41.github.io/post/about/</a></span>
+                                                <span><a href="https://shame41.github.io/post/you-xian-dui-lie/">https://shame41.github.io/post/you-xian-dui-lie/</a></span>
                                             </p>
 
                                             <p class="copyright-item">
@@ -292,9 +583,9 @@ BILIBILI https://space.bilibili.com/3088812</p>
                                                         <span style="margin-right:15px">
                                                     <i class="post-share"></i>
                                                     <span>Share:</span>
-                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://shame41.github.io/post/about/"><i class="fa fa-qrcode"></i></a>
-                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://shame41.github.io/post/about/&sharesource=qzone&title=关于&pics=https://shame41.github.io/images/avatar.png?v=1619601640796&summary="><i class="fa fa-qq"></i></a>
-                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://shame41.github.io/post/about/&sharesource=weibo&title=关于 + " - " + &pic="https://shame41.github.io/images/avatar.png?v=1619601640796 "><i class="fa fa-weibo "></i></a>
+                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://shame41.github.io/post/you-xian-dui-lie/"><i class="fa fa-qrcode"></i></a>
+                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://shame41.github.io/post/you-xian-dui-lie/&sharesource=qzone&title=优先队列&pics=https://shame41.github.io/images/avatar.png?v=1619601640796&summary="><i class="fa fa-qq"></i></a>
+                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://shame41.github.io/post/you-xian-dui-lie/&sharesource=weibo&title=优先队列 + " - " + &pic="https://shame41.github.io/images/avatar.png?v=1619601640796 "><i class="fa fa-weibo "></i></a>
                                                         
                                                             <div class="reward ">
                                                                 <div class="reward-button ">&yen;
@@ -323,7 +614,15 @@ BILIBILI https://space.bilibili.com/3088812</p>
                                                                                 <!---->
                                                                                 <section class="post-nav">
                                                                                     
+                                                                                        <a class="prev" rel="prev" href="https://shame41.github.io/post/zi-fu-chuan-pai-xu/">
+                                                                                            字符串排序
+                                                                                        </a>
+                                                                                        
                                                                                             
+                                                                                                <a class="next" rel="next" href="https://shame41.github.io/post/kuai-su-pai-xu/">
+                                                                                                    快速排序
+                                                                                                </a>
+                                                                                                
                                                                                 </section>
                     </article>
                 </div>
